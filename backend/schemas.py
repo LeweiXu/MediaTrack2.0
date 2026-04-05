@@ -85,15 +85,16 @@ class Token(BaseModel):
 # --- Search Schemas ---
 from pydantic import BaseModel
 class SearchResult(BaseModel):
-    title:       str
-    medium:      Optional[str] = None
-    origin:      Optional[str] = None
-    year:        Optional[int] = None
-    cover_url:   Optional[str] = None
-    total:       Optional[int] = None
-    external_id: Optional[str] = None
-    source:      str = ""
-    description: Optional[str] = None
+    title:        str
+    medium:       Optional[str] = None
+    origin:       Optional[str] = None
+    year:         Optional[int] = None
+    cover_url:    Optional[str] = None
+    total:        Optional[int] = None
+    external_id:  Optional[str] = None
+    source:       str = ""
+    description:  Optional[str] = None
+    external_url: Optional[str] = None
 
 # --- Stats Schemas ---
 class MediumCount(BaseModel):

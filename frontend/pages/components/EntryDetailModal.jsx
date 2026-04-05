@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { updateEntry, deleteEntry } from '../../api.jsx';
-import { MEDIUMS, STATUSES, statusLabel, fmtDate, progressLabel } from '../../utils.jsx';
+import { MEDIUMS, STATUSES, statusLabel, fmtDate, progressLabel, externalUrl } from '../../utils.jsx';
 
 function toDateInput(iso) {
   if (!iso) return '';
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted }) {
-  const [editing,       setEditing]       = useState(false);
+export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted, initialEditing = false }) {
+  const [editing,       setEditing]       = useState(initialEditing);
   const [current,       setCurrent]       = useState(entry);
   const [saving,        setSaving]        = useState(false);
   const [deleting,      setDeleting]      = useState(false);
@@ -111,7 +111,7 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted 
               {current.cover_url && (
                 <div style={{ textAlign: 'center', marginBottom: 14 }}>
                   <img src={current.cover_url} alt=""
-                    style={{ maxHeight: 200, borderRadius: 4, objectFit: 'cover' }}
+                    style={{ maxHeight: 320, borderRadius: 4, objectFit: 'cover' }}
                     onError={e => { e.target.style.display = 'none'; }} />
                 </div>
               )}
@@ -149,24 +149,36 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted 
                 </div>
               </div>
 
-              {current.status === 'completed' && (
-                <div style={{ marginBottom: 10 }}>
-                  <div className="form-label">Completed Date</div>
-                  <div>{fmtDate(current.completed_at)}</div>
-                </div>
-              )}
+              <div style={{ marginBottom: 10 }}>
+                <div className="form-label">Completed Date</div>
+                <div>{fmtDate(current.completed_at)}</div>
+              </div>
 
-              {current.notes && (
-                <div style={{ marginBottom: 10 }}>
-                  <div className="form-label">Notes</div>
-                  <div style={{ whiteSpace: 'pre-wrap', color: 'var(--dim)', fontSize: 12 }}>{current.notes}</div>
+              <div style={{ marginBottom: 10 }}>
+                <div className="form-label">Notes</div>
+                <div style={{ whiteSpace: 'pre-wrap', color: 'var(--dim)', fontSize: 12 }}>
+                  {current.notes || '—'}
                 </div>
-              )}
+              </div>
 
-              <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--dim)', marginBottom: 14 }}>
+              <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--dim)', marginBottom: 8 }}>
                 <span>Added: {fmtDate(current.created_at)}</span>
                 <span>Updated: {fmtDate(current.updated_at)}</span>
               </div>
+
+              {(() => {
+                const url = externalUrl(current.source, current.external_id, current.medium);
+                return url ? (
+                  <div style={{ marginBottom: 14, fontSize: 11 }}>
+                    <a href={url} target="_blank" rel="noopener noreferrer"
+                      style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                      onMouseOver={e => e.target.style.textDecoration = 'underline'}
+                      onMouseOut={e => e.target.style.textDecoration = 'none'}>
+                      View on {current.source === 'google_books' ? 'Google Books' : current.source === 'tmdb' ? 'TMDB' : current.source === 'anilist' ? 'AniList' : current.source} ↗
+                    </a>
+                  </div>
+                ) : null;
+              })()}
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>

@@ -11,6 +11,22 @@ export default function App() {
   const [online,         setOnline]         = useState(null);
   const [libraryFilters, setLibraryFilters] = useState({});
 
+  // ── Theme ──────────────────────────────────────────────────────────────────
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme(t => t === 'dark' ? 'light' : 'dark');
+  }
+
   // ── Auth state ─────────────────────────────────────────────────────────────
   const [token,    setToken]    = useState(() => localStorage.getItem('auth_token')    || '');
   const [username, setUsername] = useState(() => localStorage.getItem('auth_username') || '');
@@ -86,6 +102,9 @@ export default function App() {
           {online === true  && <span className="online">● online</span>}
           {online === false && <span className="offline">● offline</span>}
           <span style={{ color: 'var(--dim)' }}>lingweispc.ddns.net:6443</span>
+          <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
+            {theme === 'dark' ? '○' : '●'}
+          </button>
           {isAuthenticated && (
             <>
               <span className="topbar-user">{username}</span>
@@ -106,6 +125,13 @@ export default function App() {
         <Route path="/statistics" element={<Statistics />} />
         <Route path="*"           element={<Navigate to="/dashboard" replace />} />
       </Routes>
+
+      {/* ── Footer ── */}
+      <footer className="app-footer">
+        <span>© 2026 Lewei Xu</span>
+        <span className="footer-sep">·</span>
+        <span>LOG — personal media tracker</span>
+      </footer>
     </div>
   );
 }

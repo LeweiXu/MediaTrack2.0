@@ -66,14 +66,17 @@ async def _search_tmdb(client: httpx.AsyncClient, title: str, medium: str) -> li
             r.raise_for_status()
             for item in r.json().get("results", [])[:5]:
                 poster = item.get("poster_path")
+                item_id = str(item.get("id"))
+                tmdb_type = "movie" if med == "Film" else "tv"
                 results.append(SearchResult(
                     title=item.get("title") or item.get("name", ""),
                     medium=med,
                     year=_safe_year(item.get("release_date") or item.get("first_air_date")),
-                    cover_url=f"https://image.tmdb.org/t/p/w200{poster}" if poster else None,
-                    external_id=str(item.get("id")),
+                    cover_url=f"https://image.tmdb.org/t/p/w500{poster}" if poster else None,
+                    external_id=item_id,
                     source="tmdb",
                     description=(item.get("overview") or "")[:200] or None,
+                    external_url=f"https://www.themoviedb.org/{tmdb_type}/{item_id}",
                 ))
         except Exception as exc:
             logger.warning("TMDB search error: %s", exc)
@@ -93,7 +96,7 @@ query ($search: String, $type: MediaType) {
       episodes
       chapters
       startDate { year }
-      coverImage { medium }
+      coverImage { extraLarge large }
       countryOfOrigin
     }
   }
@@ -122,15 +125,18 @@ async def _search_anilist(client: httpx.AsyncClient, title: str, medium: str) ->
                 display_title = t.get("english") or t.get("romaji", "")
                 med = "Anime" if media_type == "ANIME" else "Manga"
                 total = item.get("episodes") or item.get("chapters")
+                anilist_id = str(item.get("id"))
+                anilist_type = "anime" if media_type == "ANIME" else "manga"
                 results.append(SearchResult(
                     title=display_title,
                     medium=med,
                     origin="Japanese",
                     year=item.get("startDate", {}).get("year"),
-                    cover_url=item.get("coverImage", {}).get("medium"),
+                    cover_url=item.get("coverImage", {}).get("extraLarge") or item.get("coverImage", {}).get("large"),
                     total=total,
-                    external_id=str(item.get("id")),
+                    external_id=anilist_id,
                     source="anilist",
+                    external_url=f"https://anilist.co/{anilist_type}/{anilist_id}",
                 ))
         except Exception as exc:
             logger.warning("AniList search error: %s", exc)
@@ -191,7 +197,7 @@ async def _search_igdb(client: httpx.AsyncClient, title: str, medium: str) -> li
         results: list[SearchResult] = []
         for item in r.json():
             cover = item.get("cover", {})
-            cover_url = cover.get("url", "").replace("t_thumb", "t_cover_small") if cover else None
+            cover_url = cover.get("url", "").replace("t_thumb", "t_cover_big") if cover else None
             if cover_url and cover_url.startswith("//"):
                 cover_url = "https:" + cover_url
             ts = item.get("first_release_date")
@@ -228,19 +234,23 @@ async def _search_google_books(client: httpx.AsyncClient, title: str, medium: st
         for item in r.json().get("items", []):
             info = item.get("volumeInfo", {})
             images = info.get("imageLinks", {})
-            cover = images.get("thumbnail") or images.get("smallThumbnail")
+            cover = (images.get("extraLarge") or images.get("large")
+                     or images.get("medium") or images.get("thumbnail")
+                     or images.get("smallThumbnail"))
             pub_date = info.get("publishedDate", "")
             year = _safe_year(pub_date)
             pages = info.get("pageCount")
+            book_id = item.get("id")
             results.append(SearchResult(
                 title=info.get("title", ""),
                 medium="Book",
                 year=year,
                 cover_url=cover,
                 total=pages,
-                external_id=item.get("id"),
+                external_id=book_id,
                 source="google_books",
                 description=(info.get("description") or "")[:200] or None,
+                external_url=f"https://books.google.com/books?id={book_id}" if book_id else None,
             ))
         return results
     except Exception as exc:

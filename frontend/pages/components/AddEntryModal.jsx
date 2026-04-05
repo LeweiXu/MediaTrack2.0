@@ -13,7 +13,7 @@ export default function AddEntryModal({ onClose, onCreated }) {
   const [saveErr,    setSaveErr]    = useState('');
 
   const [form, setForm] = useState({
-    title: '', medium: '', origin: '', status: 'planned',
+    title: '', medium: '', origin: '', status: 'current',
     year: '', rating: '', progress: '', total: '', cover_url: '', notes: '',
     completed_at: '',
   });
@@ -50,7 +50,7 @@ export default function AddEntryModal({ onClose, onCreated }) {
       title:       item.title       || '',
       medium:      item.medium      || medium || '',
       origin:      item.origin      || '',
-      status:      'planned',
+      status:      'current',
       year:        item.year        || '',
       rating:      '',
       progress:    '',

@@ -7,14 +7,26 @@
   --surface2:#1c1e20;
   --border:  #252729;
   --border2: #2e3033;
-  --text:    #d4d6d8;
-  --dim:     #5a5d62;
-  --bright:  #e8eaec;
+  --text:    #c8cacc;
+  --dim:     #848890;
+  --bright:  #eceef0;
   --accent:  #4a9eff;
   --green:   #3ecf6a;
   --amber:   #f5a623;
   --red:     #e05656;
   --purple:  #a78bfa;
+}
+
+/* ── Light theme overrides ───────────────────────────────────────────────── */
+html.light {
+  --bg:      #f4f4f2;
+  --surface: #eaeae8;
+  --surface2:#e0e0de;
+  --border:  #d0d0ce;
+  --border2: #bcbcba;
+  --text:    #2e2e2c;
+  --dim:     #585856;
+  --bright:  #111110;
 }
 
 /* ── Reset ───────────────────────────────────────────────────────────────── */
@@ -109,6 +121,24 @@ input, select, textarea { font-family: 'IBM Plex Mono', monospace; }
 
 .topbar-right .btn-logout:hover { color: var(--red); border-color: var(--red); }
 
+.theme-toggle {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--dim);
+  font-size: 11px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  transition: color 0.15s, border-color 0.15s;
+  padding: 0;
+}
+
+.theme-toggle:hover { color: var(--text); border-color: var(--text); }
+
 /* ── Auth Modal ──────────────────────────────────────────────────────────── */
 .auth-tab {
   flex: 1;
@@ -139,10 +169,25 @@ input, select, textarea { font-family: 'IBM Plex Mono', monospace; }
 /* ── App shell ───────────────────────────────────────────────────────────── */
 .app-shell {
   padding-top: 40px;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+.app-footer {
+  border-top: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--dim);
+  letter-spacing: 0.08em;
+  flex-shrink: 0;
+}
+
+.footer-sep { color: var(--border2); }
 
 /* ── Three-column layout ─────────────────────────────────────────────────── */
 .layout-3col {
@@ -375,7 +420,13 @@ input, select, textarea { font-family: 'IBM Plex Mono', monospace; }
 .rating-cell span  { color: var(--dim); }
 
 /* ── Action cell ─────────────────────────────────────────────────────────── */
-.action-cell { display: flex; gap: 6px; align-items: center; }
+.action-cell { white-space: nowrap; min-width: 130px; }
+
+.action-cell-inner {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
 
 /* ── Stat grid (right panel) ─────────────────────────────────────────────── */
 .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 18px; }

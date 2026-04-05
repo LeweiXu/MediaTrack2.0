@@ -64,6 +64,26 @@ export function progressLabel(entry) {
   return `${progress} ${unit}`;
 }
 
+/** Build a link to the entry's page on its external source database */
+export function externalUrl(source, external_id, medium) {
+  if (!source || !external_id) return null;
+  switch (source) {
+    case 'anilist': {
+      const type = (medium === 'Anime') ? 'anime' : 'manga';
+      return `https://anilist.co/${type}/${external_id}`;
+    }
+    case 'tmdb': {
+      // Entries created from TV searches have medium "TV Show"
+      const type = (medium === 'TV Show') ? 'tv' : 'movie';
+      return `https://www.themoviedb.org/${type}/${external_id}`;
+    }
+    case 'google_books':
+      return `https://books.google.com/books?id=${external_id}`;
+    default:
+      return null;
+  }
+}
+
 /** Normalise the varied shapes the backend might return for a list response */
 export function extractItems(data) {
   if (Array.isArray(data)) return data;

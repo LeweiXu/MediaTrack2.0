@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getEntries, updateEntry } from '../api.jsx';
+import { getEntries, updateEntry, deleteEntry } from '../api.jsx';
 import { statusLabel, fmtDate, progressPercent, progressLabel, extractItems, MEDIUMS, STATUSES, ORIGINS } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
 import EntryDetailModal from './components/EntryDetailModal.jsx';
@@ -22,8 +22,11 @@ export default function Library({ initialFilters = {} }) {
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
   const [counts,       setCounts]       = useState({});
-  const [showAdd,      setShowAdd]      = useState(false);
-  const [detailEntry,  setDetailEntry]  = useState(null);
+  const [showAdd,        setShowAdd]        = useState(false);
+  const [detailEntry,    setDetailEntry]    = useState(null);
+  const [startEditing,   setStartEditing]   = useState(false);
+  const [confirmDeleteId,setConfirmDeleteId] = useState(null);
+  const [editingProgress,setEditingProgress] = useState(null); // { id, value }
 
   const [search,       setSearch]       = useState(initialFilters.title  || '');
   const [statusFilter, setStatusFilter] = useState(initialFilters.status || '');
@@ -79,17 +82,40 @@ export default function Library({ initialFilters = {} }) {
   async function handleStatusChange(id, newStatus) {
     try {
       await updateEntry(id, { status: newStatus });
-      setEntries(es => es.map(e => e.id === id ? { ...e, status: newStatus } : e));
+      load();
     } catch (e) {
       alert('Update failed: ' + e.message);
     }
   }
 
+  async function handleProgressSave(id, value) {
+    setEditingProgress(null);
+    const num = parseInt(value, 10);
+    if (!isNaN(num)) {
+      try {
+        await updateEntry(id, { progress: num });
+        load();
+      } catch (e) {
+        alert('Update failed: ' + e.message);
+      }
+    }
+  }
+
+  async function handleDeleteEntry(id) {
+    try {
+      await deleteEntry(id);
+      setConfirmDeleteId(null);
+      load();
+    } catch (e) {
+      alert('Delete failed: ' + e.message);
+    }
+  }
+
   const handleUpdated = (updated) => {
-    setEntries(es => es.map(e => e.id === updated.id ? updated : e));
     setDetailEntry(updated);
+    load();
   };
-  const handleDeleted = (id) => { setEntries(es => es.filter(e => e.id !== id)); setTotal(t => t - 1); setDetailEntry(null); };
+  const handleDeleted = (id) => { setConfirmDeleteId(null); setDetailEntry(null); load(); };
 
   const clearFilters = () => { setSearch(''); setStatusFilter(''); setMediumFilter(''); setOriginFilter(''); };
   const hasFilters   = search || statusFilter || mediumFilter || originFilter;
@@ -219,13 +245,16 @@ export default function Library({ initialFilters = {} }) {
                   <SortTh field="rating">Rating</SortTh>
                   <SortTh field="updated_at">Updated</SortTh>
                   <SortTh field="completed_at">Completed</SortTh>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map(e => {
                   const pct = progressPercent(e);
+                  const isEditingProg = editingProgress?.id === e.id;
+                  const isConfirmDel  = confirmDeleteId === e.id;
                   return (
-                    <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
+                    <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => { setDetailEntry(e); setStartEditing(false); }}>
                       <td>
                         <div className="cover-cell">
                           <div className="cover-thumb">
@@ -239,15 +268,34 @@ export default function Library({ initialFilters = {} }) {
                       </td>
                       <td><span style={{ color: 'var(--dim)' }}>{e.medium}</span></td>
                       <td><span style={{ color: 'var(--dim)' }}>{e.year || '—'}</span></td>
-                      <td>
-                        <div className="progress-cell">
-                          {progressLabel(e)}
-                          {pct > 0 && (
-                            <div className="progress-mini">
-                              <div className="progress-mini-fill" style={{ width: `${pct}%` }} />
-                            </div>
-                          )}
-                        </div>
+                      <td onClick={ev => ev.stopPropagation()}>
+                        {isEditingProg ? (
+                          <input
+                            className="inline-select"
+                            type="number" min="0"
+                            style={{ width: 64 }}
+                            value={editingProgress.value}
+                            autoFocus
+                            onChange={ev => setEditingProgress({ id: e.id, value: ev.target.value })}
+                            onKeyDown={ev => {
+                              if (ev.key === 'Enter') handleProgressSave(e.id, editingProgress.value);
+                              if (ev.key === 'Escape') setEditingProgress(null);
+                            }}
+                            onBlur={() => handleProgressSave(e.id, editingProgress.value)}
+                          />
+                        ) : (
+                          <div className="progress-cell"
+                            title="Click to edit progress"
+                            style={{ cursor: 'text' }}
+                            onClick={() => setEditingProgress({ id: e.id, value: String(e.progress ?? '') })}>
+                            {progressLabel(e)}
+                            {pct > 0 && (
+                              <div className="progress-mini">
+                                <div className="progress-mini-fill" style={{ width: `${pct}%` }} />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td onClick={ev => ev.stopPropagation()}>
                         <select className="inline-select" value={e.status}
@@ -262,6 +310,38 @@ export default function Library({ initialFilters = {} }) {
                       </td>
                       <td><span style={{ color: 'var(--dim)' }}>{fmtDate(e.updated_at)}</span></td>
                       <td><span style={{ color: 'var(--dim)' }}>{fmtDate(e.completed_at)}</span></td>
+                      <td className="action-cell" onClick={ev => ev.stopPropagation()}>
+                        <div className="action-cell-inner">
+                        {isConfirmDel ? (
+                          <>
+                            <span style={{ fontSize: 11, color: 'var(--red)' }}>sure?</span>
+                            <button className="btn btn-danger"
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                              onClick={() => handleDeleteEntry(e.id)}>
+                              yes
+                            </button>
+                            <button className="icon-btn"
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                              onClick={() => setConfirmDeleteId(null)}>
+                              no
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button className="icon-btn"
+                              style={{ color: 'var(--accent)', borderColor: 'var(--accent)', padding: '2px 8px', fontSize: 11 }}
+                              onClick={() => { setDetailEntry(e); setStartEditing(true); }}>
+                              edit
+                            </button>
+                            <button className="icon-btn danger"
+                              style={{ padding: '2px 8px', fontSize: 11 }}
+                              onClick={() => setConfirmDeleteId(e.id)}>
+                              delete
+                            </button>
+                          </>
+                        )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -330,9 +410,10 @@ export default function Library({ initialFilters = {} }) {
       {detailEntry && (
         <EntryDetailModal
           entry={detailEntry}
-          onClose={() => setDetailEntry(null)}
+          onClose={() => { setDetailEntry(null); setStartEditing(false); }}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
+          initialEditing={startEditing}
         />
       )}
     </div>
