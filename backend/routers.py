@@ -1,10 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import io
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from db import get_db
 from models import User
 from schemas import (
     EntryCreate, EntryListResponse, EntryRead, EntryUpdate,
+    ImportConfirmRequest, ImportConfirmResponse, ImportPreviewResponse,
     SearchResult, StatsResponse,
     UserCreate, UserRead, Token, ChangePassword,
 )
@@ -12,6 +15,8 @@ from services import entry_service
 from services import auth_service
 from services.search_service import search_media
 from services.stats_service import get_stats
+from services.export_service import export_entries_csv
+from services.import_service import preview_import, confirm_import
 
 router = APIRouter()
 
@@ -58,6 +63,37 @@ def change_password(
     db.commit()
 
 # ── Entries endpoints ─────────────────────────────────────────────────────────
+
+@router.get("/entries/export")
+def export_entries(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(auth_service.get_current_user),
+):
+    csv_content = export_entries_csv(db, current_user.username)
+    filename = f"library_{current_user.username}.csv"
+    return StreamingResponse(
+        io.StringIO(csv_content),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+@router.post("/entries/import/preview", response_model=ImportPreviewResponse)
+async def import_preview(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(auth_service.get_current_user),
+):
+    content = await file.read()
+    return preview_import(db, content.decode("utf-8-sig"), current_user.username)
+
+@router.post("/entries/import/confirm", response_model=ImportConfirmResponse)
+def import_confirm(
+    payload: ImportConfirmRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(auth_service.get_current_user),
+):
+    to_update = [{"db_id": item.db_id, "csv_row": item.csv_row} for item in payload.to_update]
+    return confirm_import(db, payload.to_create, to_update, current_user.username)
 
 @router.get("/entries", response_model=EntryListResponse)
 def list_entries(

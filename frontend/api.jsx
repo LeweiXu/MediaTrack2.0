@@ -70,6 +70,45 @@ export const createEntry = (data)      => req('/entries', { method: 'POST', body
 export const updateEntry = (id, data)  => req(`/entries/${id}`, { method: 'PUT',  body: JSON.stringify(data) });
 export const deleteEntry = (id)        => req(`/entries/${id}`, { method: 'DELETE' });
 
+export async function exportEntries() {
+  const res = await fetch(`${BASE}/entries/export`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  });
+  if (!res.ok) throw new Error(`Export failed: ${res.status} ${res.statusText}`);
+  return res.blob();
+}
+
+export async function previewImport(file) {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetch(`${BASE}/entries/import/preview`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: form,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status} ${res.statusText}: ${text}`);
+  }
+  return res.json();
+}
+
+export async function confirmImport(payload) {
+  const res = await fetch(`${BASE}/entries/import/confirm`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status} ${res.statusText}: ${text}`);
+  }
+  return res.json();
+}
+
 export const searchMedia = (title, medium = '') => {
   const qs = new URLSearchParams({ title, ...(medium && { medium }) }).toString();
   return req(`/search?${qs}`);

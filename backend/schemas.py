@@ -100,6 +100,28 @@ class SearchResult(BaseModel):
     description:  Optional[str] = None
     external_url: Optional[str] = None
 
+# --- Import Schemas ---
+from typing import Any
+
+class ImportPreviewResponse(BaseModel):
+    error: Optional[str] = None
+    to_import: list[dict[str, Any]] = []
+    exact_duplicates: list[dict[str, Any]] = []
+    conflicts: list[dict[str, Any]] = []
+
+class ImportUpdateItem(BaseModel):
+    db_id: int
+    csv_row: dict[str, Any]
+
+class ImportConfirmRequest(BaseModel):
+    to_create: list[dict[str, Any]] = []
+    to_update: list[ImportUpdateItem] = []
+
+class ImportConfirmResponse(BaseModel):
+    created: int
+    updated: int
+    skipped: int
+
 # --- Stats Schemas ---
 class MediumCount(BaseModel):
     medium: str

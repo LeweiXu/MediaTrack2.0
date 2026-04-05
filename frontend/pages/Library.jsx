@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getEntries, updateEntry, deleteEntry } from '../api.jsx';
+import { getEntries, updateEntry, deleteEntry, exportEntries } from '../api.jsx';
 import { statusLabel, fmtDate, progressPercent, progressLabel, extractItems, MEDIUMS, STATUSES, ORIGINS } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
 import EntryDetailModal from './components/EntryDetailModal.jsx';
+import ImportModal from './components/ImportModal.jsx';
 
 const SORT_FIELDS = [
   { key: 'title',        label: 'Title' },
@@ -130,16 +131,19 @@ export default function Library({ initialFilters = {} }) {
     </th>
   );
 
-  function exportCSV() {
-    const rows = [
-      ['Title','Medium','Origin','Year','Status','Rating','Progress','Total'],
-      ...entries.map(e => [e.title, e.medium, e.origin, e.year, e.status, e.rating, e.progress, e.total]),
-    ].map(r => r.map(v => `"${v ?? ''}"`).join(',')).join('\n');
-    const a = Object.assign(document.createElement('a'), {
-      href: URL.createObjectURL(new Blob([rows], { type: 'text/csv' })),
-      download: 'library.csv',
-    });
-    a.click();
+  const [showImport, setShowImport] = useState(false);
+
+  async function exportCSV() {
+    try {
+      const blob = await exportEntries();
+      const a = Object.assign(document.createElement('a'), {
+        href: URL.createObjectURL(blob),
+        download: 'library.csv',
+      });
+      a.click();
+    } catch (err) {
+      alert(`Export failed: ${err.message}`);
+    }
   }
 
   return (
@@ -375,10 +379,14 @@ export default function Library({ initialFilters = {} }) {
           ))}
         </div>
 
-        <p className="panel-title">Export</p>
+        <p className="panel-title">Export / Import</p>
         <button className="icon-btn" style={{ textAlign: 'left', padding: '6px 10px', width: '100%' }}
           onClick={exportCSV}>
-          Export CSV (this view)
+          Export CSV
+        </button>
+        <button className="icon-btn" style={{ textAlign: 'left', padding: '6px 10px', width: '100%', marginTop: 4 }}
+          onClick={() => setShowImport(true)}>
+          Import CSV
         </button>
 
         <div style={{ marginTop: 20 }}>
@@ -414,6 +422,13 @@ export default function Library({ initialFilters = {} }) {
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
           initialEditing={startEditing}
+        />
+      )}
+
+      {showImport && (
+        <ImportModal
+          onClose={() => setShowImport(false)}
+          onImported={() => { load(); }}
         />
       )}
     </div>
