@@ -58,8 +58,9 @@ export function progressLabel(entry) {
   if (!entry) return '—';
   const { progress, total, medium } = entry;
   if (!progress && !total) return '—';
+  const isWebNovel = medium?.toLowerCase() === 'web novel';
   const isBook = medium?.toLowerCase().includes('book') || medium?.toLowerCase().includes('novel');
-  const unit = isBook ? 'p.' : 'ep.';
+  const unit = isWebNovel ? 'ch.' : isBook ? 'p.' : 'ep.';
   if (total) return `${progress ?? '?'} / ${total} ${unit}`;
   return `${progress} ${unit}`;
 }

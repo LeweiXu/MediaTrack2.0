@@ -1,24 +1,42 @@
+
 # LOG — Media Tracker
 
-A personal web application for tracking all media you consume — films, TV shows, anime, games, books, manga, light novels, web novels, and comics. LOG is a single-user tool designed for home server use, inspired by Letterboxd, MyAnimeList, Goodreads, and Backloggd, but unified in one place.
+## 1. Project Overview & Features
 
-Deployed and available here: https://log-media-tracker.vercel.app/dashboard
+**LOG** is a web application for tracking all types of media you consume — films, TV shows, anime, games, books, manga, light novels, web novels, and comics. Inspired by Letterboxd, MyAnimeList, Goodreads, and Backloggd, LOG unifies all your media tracking in one place.
 
----
+**Public Demo:**
+- Deployed and available for public use: [https://log-media-tracker.vercel.app/dashboard](https://log-media-tracker.vercel.app/dashboard)
+- Anyone can register an account and start using the app immediately.
 
-## Features
+**Scalability:**
+- Built with FastAPI and PostgreSQL, LOG is easily scalable to thousands (and potentially millions) of users, depending on your hosting resources.
 
+**Key Features:**
 - **Unified Media Tracking:** Track every medium in one place: films, TV, anime, games, books, manga, light novels, web novels, comics.
 - **Powerful Filtering & Sorting:** Filter and sort by status, medium, origin, year, rating, and more.
 - **Rich Statistics:** Visualize your media habits with charts and breakdowns by medium, origin, status, and time.
 - **Auto Metadata Search:** Instantly search TMDB, AniList, IGDB, and Google Books to auto-fill entry details.
 - **Manual & Bulk Entry:** Add entries manually or import/export your entire library as JSON or CSV.
 - **Modern UI:** Responsive, clean interface with dark/light mode (coming soon).
-- **Multi-User:*** Designed for multiple users, simply register an account to get started.
+- **Multi-User:** Designed for multiple users; simply register an account to get started.
+
+**Pages & UI:**
+- **Dashboard:** Overview, "Currently Consuming", "Recently Completed", stats, and activity log.
+- **Library:** Full sortable/filterable table, CSV export, pagination, and quick status updates.
+- **Statistics:** Rich charts (bar, pie, rating distribution, streaks, etc.) powered by Recharts.
+- **Settings:** (Planned) Dark/light mode, import/export tools.
+
+**Why This Project?**
+- Unify all media tracking in one place, with full control and privacy.
+- Showcase modern full-stack development skills (React, FastAPI, PostgreSQL, SQLAlchemy, Vite, Recharts).
+- Demonstrate best practices: clean architecture, typed APIs, pure service layers, and modern UI/UX.
 
 ---
 
-## Tech Stack
+## 2. Technical Details & Local Development
+
+### Tech Stack
 
 | Layer     | Technology                                      |
 |-----------|-------------------------------------------------|
@@ -31,9 +49,7 @@ Deployed and available here: https://log-media-tracker.vercel.app/dashboard
 - **Frontend:** Runs on port 3000 (`npm start` via Vite)
 - **Backend:** Runs on port 6443 (`python main.py` via uvicorn)
 
----
-
-## Project Structure
+### Project Structure
 
 ```
 MediaTrack2.0/
@@ -56,21 +72,19 @@ MediaTrack2.0/
 │   │       ├── EditEntryModal.jsx
 │   │       └── ...
 └── backend/                   # FastAPI application
-		├── main.py
-		├── requirements.txt
-		├── alembic/
-		├── models.py
-		├── routers.py
-		├── schemas.py
-		├── services/
-		└── ...
+    ├── main.py
+    ├── requirements.txt
+    ├── alembic/
+    ├── models.py
+    ├── routers.py
+    ├── schemas.py
+    ├── services/
+    └── ...
 ```
 
----
+### Data Model
 
-## Data Model
-
-Every tracked item is an **Entry**. The main fields include:
+Every tracked item is an **Entry**. Main fields include:
 
 - `id` (int): Primary key
 - `title` (string): Required, 1–500 chars
@@ -87,9 +101,7 @@ Every tracked item is an **Entry**. The main fields include:
 - `source` (string): Which API the metadata came from
 - `created_at`, `updated_at`, `completed_at` (datetime): Timestamps
 
----
-
-## API Overview
+### API Overview
 
 All API endpoints are documented and strictly typed. The backend exposes endpoints for:
 
@@ -100,62 +112,41 @@ All API endpoints are documented and strictly typed. The backend exposes endpoin
 - (Planned) Full library export (`/entries/export`)
 - (Planned) Cover image proxy (`/proxy/image`)
 
----
-
-## Pages & UI
-
-- **Dashboard:** Overview, "Currently Consuming", "Recently Completed", stats, and activity log.
-- **Library:** Full sortable/filterable table, CSV export, pagination, and quick status updates.
-- **Statistics:** Rich charts (bar, pie, rating distribution, streaks, etc.) powered by Recharts.
-- **Settings:** (Planned) Dark/light mode, import/export tools.
-
----
-
-## Why This Project?
-
-LOG was built as a personal project to:
-- Unify all media tracking in one place, with full control and privacy.
-- Showcase modern full-stack development skills (React, FastAPI, PostgreSQL, SQLAlchemy, Vite, Recharts).
-- Demonstrate best practices: clean architecture, typed APIs, pure service layers, and modern UI/UX.
-- Serve as a portfolio piece for job applications.
-
----
-
-## Getting Started
+### Running Locally
 
 1. **Clone the repo:**
-	 ```sh
-	 git clone https://github.com/yourusername/MediaTrack2.0.git
-	 cd MediaTrack2.0
-	 ```
+    ```sh
+    git clone https://github.com/yourusername/MediaTrack2.0.git
+    cd MediaTrack2.0
+    ```
 2. **Backend setup:**
-	 - Create a `.env` file in `backend/` (see `context.md` for example).
-	 - Install Python dependencies:
-		 ```sh
-		 cd backend
-		 pip install -r requirements.txt
-		 ```
-	 - Run database migrations:
-		 ```sh
-		 alembic upgrade head
-		 ```
-	 - Start the backend:
-		 ```sh
-		 python main.py
-		 ```
+    - Create a `.env` file in `backend/` (see `context.md` for example).
+    - Install Python dependencies:
+        ```sh
+        cd backend
+        pip install -r requirements.txt
+        ```
+    - Run database migrations:
+        ```sh
+        alembic upgrade head
+        ```
+    - Start the backend:
+        ```sh
+        python main.py
+        ```
 3. **Frontend setup:**
-	 - Install dependencies:
-		 ```sh
-		 cd frontend
-		 npm install
-		 ```
-	 - Start the frontend:
-		 ```sh
-		 npm start
-		 ```
+    - Install dependencies:
+        ```sh
+        cd frontend
+        npm install
+        ```
+    - Start the frontend:
+        ```sh
+        npm start
+        ```
 4. **Open in browser:**
-	 - Frontend: [http://localhost:3000](http://localhost:3000)
-	 - Backend: [http://localhost:6443](http://localhost:6443)
+    - Frontend: [http://localhost:3000](http://localhost:3000)
+    - Backend: [http://localhost:6443](http://localhost:6443)
 
 ---
 
