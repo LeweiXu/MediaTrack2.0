@@ -108,6 +108,17 @@ input, select, textarea { font-family: 'IBM Plex Mono', monospace; }
   font-size: 11px;
 }
 
+.topbar-right .topbar-user-btn {
+  cursor: pointer;
+  border-bottom: 1px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.topbar-right .topbar-user-btn:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
 .topbar-right .btn-logout {
   background: transparent;
   border: 1px solid var(--border2);
@@ -528,6 +539,31 @@ input, select, textarea { font-family: 'IBM Plex Mono', monospace; }
 
 .modal-title { font-size: 13px; font-weight: 500; color: var(--bright); letter-spacing: 0.05em; }
 .modal-body  { padding: 18px; }
+
+.settings-modal { width: 360px; }
+
+.settings-section-label {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin: 0 0 12px;
+}
+
+.settings-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
+}
+
+.settings-msg {
+  font-size: 11px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+.settings-msg-error   { color: var(--red);   background: rgba(224,86,86,0.1); }
+.settings-msg-success { color: var(--green); background: rgba(62,207,106,0.1); }
 
 .modal-footer {
   display: flex;

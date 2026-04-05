@@ -1,4 +1,4 @@
-export const BASE = 'http://localhost:6443';
+export const BASE = 'https://lingweispc.ddns.net:6443';
 
 const getToken = () => localStorage.getItem('auth_token');
 
@@ -47,6 +47,13 @@ export async function register(username, email, password) {
     throw new Error(`${res.status} ${res.statusText}: ${text}`);
   }
   return res.json(); // { username, email }
+}
+
+export async function changePassword(currentPassword, newPassword) {
+  return req('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
+  });
 }
 
 // ── Entries ───────────────────────────────────────────────────────────────────

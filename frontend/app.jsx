@@ -3,13 +3,15 @@ import { Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom'
 import Dashboard  from './pages/Dashboard.jsx';
 import Library    from './pages/Library.jsx';
 import Statistics from './pages/Statistics.jsx';
-import AuthModal  from './pages/components/AuthModal.jsx';
+import AuthModal      from './pages/components/AuthModal.jsx';
+import SettingsModal  from './pages/components/SettingsModal.jsx';
 import { BASE } from './api.jsx';
 
 export default function App() {
   const navigate = useNavigate();
   const [online,         setOnline]         = useState(null);
   const [libraryFilters, setLibraryFilters] = useState({});
+  const [showSettings,   setShowSettings]   = useState(false);
 
   // ── Theme ──────────────────────────────────────────────────────────────────
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -107,7 +109,7 @@ export default function App() {
           </button>
           {isAuthenticated && (
             <>
-              <span className="topbar-user">{username}</span>
+              <span className="topbar-user topbar-user-btn" onClick={() => setShowSettings(true)}>{username}</span>
               <button className="btn-logout" onClick={handleLogout}>logout</button>
             </>
           )}
@@ -125,6 +127,8 @@ export default function App() {
         <Route path="/statistics" element={<Statistics />} />
         <Route path="*"           element={<Navigate to="/dashboard" replace />} />
       </Routes>
+
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
 
       {/* ── Footer ── */}
       <footer className="app-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

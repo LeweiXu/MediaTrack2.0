@@ -82,6 +82,10 @@ class Token(BaseModel):
     access_token: str
     token_type:   str = "bearer"
 
+class ChangePassword(BaseModel):
+    current_password: str
+    new_password:     str = Field(..., min_length=6)
+
 # --- Search Schemas ---
 from pydantic import BaseModel
 class SearchResult(BaseModel):

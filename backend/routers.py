@@ -6,7 +6,7 @@ from models import User
 from schemas import (
     EntryCreate, EntryListResponse, EntryRead, EntryUpdate,
     SearchResult, StatsResponse,
-    UserCreate, UserRead, Token,
+    UserCreate, UserRead, Token, ChangePassword,
 )
 from services import entry_service
 from services import auth_service
@@ -45,6 +45,17 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
             headers={"WWW-Authenticate": "Bearer"},
         )
     return Token(access_token=auth_service.create_token(user.username))
+
+@router.post("/auth/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    payload: ChangePassword,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(auth_service.get_current_user),
+):
+    if not auth_service.verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect")
+    current_user.hashed_password = auth_service.hash_password(payload.new_password)
+    db.commit()
 
 # ── Entries endpoints ─────────────────────────────────────────────────────────
 
