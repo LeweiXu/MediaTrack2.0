@@ -2,7 +2,7 @@
 Entry point — run with:
     python main.py
 or:
-    uvicorn app.main:app --host 0.0.0.0 --port 6443 --reload
+    uvicorn main:app --host 0.0.0.0 --port 8001 --reload
 """
 import uvicorn
 from config import get_settings
