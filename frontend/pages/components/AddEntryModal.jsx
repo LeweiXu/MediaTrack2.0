@@ -15,9 +15,21 @@ export default function AddEntryModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
     title: '', medium: '', origin: '', status: 'planned',
     year: '', rating: '', progress: '', total: '', cover_url: '', notes: '',
+    completed_at: '',
   });
 
-  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  const setField = (k, v) => setForm(f => {
+    const next = { ...f, [k]: v };
+    if (k === 'status' && v === 'completed') {
+      if (!next.completed_at) next.completed_at = today();
+      if (next.total !== '') next.progress = next.total;
+    }
+    if (k === 'status' && v !== 'completed') next.completed_at = '';
+    if (k === 'total' && f.status === 'completed' && v !== '') next.progress = v;
+    return next;
+  });
 
   async function handleSearch(e) {
     e.preventDefault();
@@ -58,10 +70,11 @@ export default function AddEntryModal({ onClose, onCreated }) {
     try {
       const payload = {
         ...form,
-        year:     form.year     !== '' ? parseInt(form.year)       : undefined,
-        rating:   form.rating   !== '' ? parseFloat(form.rating)   : undefined,
-        progress: form.progress !== '' ? parseInt(form.progress)   : undefined,
-        total:    form.total    !== '' ? parseInt(form.total)      : undefined,
+        year:         form.year         !== '' ? parseInt(form.year)       : undefined,
+        rating:       form.rating       !== '' ? parseFloat(form.rating)   : undefined,
+        progress:     form.progress     !== '' ? parseInt(form.progress)   : undefined,
+        total:        form.total        !== '' ? parseInt(form.total)      : undefined,
+        completed_at: form.completed_at ? form.completed_at + 'T00:00:00Z' : undefined,
       };
       const created = await createEntry(payload);
       onCreated(created);
@@ -183,6 +196,14 @@ export default function AddEntryModal({ onClose, onCreated }) {
                   </select>
                 </div>
               </div>
+
+              {form.status === 'completed' && (
+                <div className="form-row" style={{ marginBottom: 14 }}>
+                  <label className="form-label">Completed Date</label>
+                  <input className="form-input" type="date" value={form.completed_at}
+                    onChange={e => setField('completed_at', e.target.value)} />
+                </div>
+              )}
 
               <div className="form-row-2" style={{ marginBottom: 14 }}>
                 <div>

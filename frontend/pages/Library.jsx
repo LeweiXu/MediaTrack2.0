@@ -2,15 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { getEntries, updateEntry } from '../api.jsx';
 import { statusLabel, fmtDate, progressPercent, progressLabel, extractItems, MEDIUMS, STATUSES, ORIGINS } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
-import EditEntryModal from './components/EditEntryModal.jsx';
+import EntryDetailModal from './components/EntryDetailModal.jsx';
 
 const SORT_FIELDS = [
-  { key: 'title',      label: 'Title' },
-  { key: 'medium',     label: 'Medium' },
-  { key: 'rating',     label: 'Rating' },
-  { key: 'status',     label: 'Status' },
-  { key: 'year',       label: 'Year' },
-  { key: 'updated_at', label: 'Updated' },
+  { key: 'title',        label: 'Title' },
+  { key: 'medium',       label: 'Medium' },
+  { key: 'rating',       label: 'Rating' },
+  { key: 'status',       label: 'Status' },
+  { key: 'year',         label: 'Year' },
+  { key: 'updated_at',   label: 'Updated' },
+  { key: 'completed_at', label: 'Completed' },
 ];
 
 const LIMIT = 40;
@@ -22,7 +23,7 @@ export default function Library({ initialFilters = {} }) {
   const [error,        setError]        = useState('');
   const [counts,       setCounts]       = useState({});
   const [showAdd,      setShowAdd]      = useState(false);
-  const [editEntry,    setEditEntry]    = useState(null);
+  const [detailEntry,  setDetailEntry]  = useState(null);
 
   const [search,       setSearch]       = useState(initialFilters.title  || '');
   const [statusFilter, setStatusFilter] = useState(initialFilters.status || '');
@@ -84,8 +85,11 @@ export default function Library({ initialFilters = {} }) {
     }
   }
 
-  const handleUpdated = (updated) => setEntries(es => es.map(e => e.id === updated.id ? updated : e));
-  const handleDeleted = (id) => { setEntries(es => es.filter(e => e.id !== id)); setTotal(t => t - 1); };
+  const handleUpdated = (updated) => {
+    setEntries(es => es.map(e => e.id === updated.id ? updated : e));
+    setDetailEntry(updated);
+  };
+  const handleDeleted = (id) => { setEntries(es => es.filter(e => e.id !== id)); setTotal(t => t - 1); setDetailEntry(null); };
 
   const clearFilters = () => { setSearch(''); setStatusFilter(''); setMediumFilter(''); setOriginFilter(''); };
   const hasFilters   = search || statusFilter || mediumFilter || originFilter;
@@ -204,7 +208,7 @@ export default function Library({ initialFilters = {} }) {
 
         {!error && !loading && entries.length > 0 && (
           <>
-            <table className="media-table">
+              <table className="media-table">
               <thead>
                 <tr>
                   <SortTh field="title">Title</SortTh>
@@ -214,14 +218,14 @@ export default function Library({ initialFilters = {} }) {
                   <SortTh field="status">Status</SortTh>
                   <SortTh field="rating">Rating</SortTh>
                   <SortTh field="updated_at">Updated</SortTh>
-                  <th />
+                  <SortTh field="completed_at">Completed</SortTh>
                 </tr>
               </thead>
               <tbody>
                 {entries.map(e => {
                   const pct = progressPercent(e);
                   return (
-                    <tr key={e.id}>
+                    <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
                       <td>
                         <div className="cover-cell">
                           <div className="cover-thumb">
@@ -245,7 +249,7 @@ export default function Library({ initialFilters = {} }) {
                           )}
                         </div>
                       </td>
-                      <td>
+                      <td onClick={ev => ev.stopPropagation()}>
                         <select className="inline-select" value={e.status}
                           onChange={ev => handleStatusChange(e.id, ev.target.value)}>
                           {STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
@@ -257,11 +261,7 @@ export default function Library({ initialFilters = {} }) {
                         </span>
                       </td>
                       <td><span style={{ color: 'var(--dim)' }}>{fmtDate(e.updated_at)}</span></td>
-                      <td>
-                        <div className="action-cell">
-                          <button className="icon-btn" onClick={() => setEditEntry(e)}>Edit</button>
-                        </div>
-                      </td>
+                      <td><span style={{ color: 'var(--dim)' }}>{fmtDate(e.completed_at)}</span></td>
                     </tr>
                   );
                 })}
@@ -327,10 +327,10 @@ export default function Library({ initialFilters = {} }) {
         />
       )}
 
-      {editEntry && (
-        <EditEntryModal
-          entry={editEntry}
-          onClose={() => setEditEntry(null)}
+      {detailEntry && (
+        <EntryDetailModal
+          entry={detailEntry}
+          onClose={() => setDetailEntry(null)}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
         />

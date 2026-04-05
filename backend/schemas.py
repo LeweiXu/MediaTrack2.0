@@ -28,21 +28,22 @@ class EntryBase(BaseModel):
         return v
 
 class EntryCreate(EntryBase):
-    pass
+    completed_at: Optional[datetime] = None
 
 class EntryUpdate(BaseModel):
-    title:       Optional[str]   = Field(None, min_length=1, max_length=500)
-    medium:      Optional[str]   = Field(None, max_length=100)
-    origin:      Optional[str]   = Field(None, max_length=100)
-    year:        Optional[int]   = Field(None, ge=1800, le=2100)
-    cover_url:   Optional[str]   = Field(None, max_length=1000)
-    notes:       Optional[str]   = None
-    status:      Optional[str]   = Field(None, max_length=50)
-    rating:      Optional[float] = Field(None, ge=0, le=10)
-    progress:    Optional[int]   = Field(None, ge=0)
-    total:       Optional[int]   = Field(None, ge=0)
-    external_id: Optional[str]   = Field(None, max_length=200)
-    source:      Optional[str]   = Field(None, max_length=100)
+    title:        Optional[str]      = Field(None, min_length=1, max_length=500)
+    medium:       Optional[str]      = Field(None, max_length=100)
+    origin:       Optional[str]      = Field(None, max_length=100)
+    year:         Optional[int]      = Field(None, ge=1800, le=2100)
+    cover_url:    Optional[str]      = Field(None, max_length=1000)
+    notes:        Optional[str]      = None
+    status:       Optional[str]      = Field(None, max_length=50)
+    rating:       Optional[float]    = Field(None, ge=0, le=10)
+    progress:     Optional[int]      = Field(None, ge=0)
+    total:        Optional[int]      = Field(None, ge=0)
+    external_id:  Optional[str]      = Field(None, max_length=200)
+    source:       Optional[str]      = Field(None, max_length=100)
+    completed_at: Optional[datetime] = None
 
     @field_validator("status")
     @classmethod

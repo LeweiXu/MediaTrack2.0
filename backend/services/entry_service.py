@@ -11,14 +11,15 @@ from schemas import EntryCreate, EntryUpdate, EntryListResponse, EntryRead
 
 # Columns that the frontend is allowed to sort by
 SORTABLE_COLUMNS: dict[str, object] = {
-    "title":      Entry.title,
-    "medium":     Entry.medium,
-    "origin":     Entry.origin,
-    "year":       Entry.year,
-    "status":     Entry.status,
-    "rating":     Entry.rating,
-    "created_at": Entry.created_at,
-    "updated_at": Entry.updated_at,
+    "title":        Entry.title,
+    "medium":       Entry.medium,
+    "origin":       Entry.origin,
+    "year":         Entry.year,
+    "status":       Entry.status,
+    "rating":       Entry.rating,
+    "created_at":   Entry.created_at,
+    "updated_at":   Entry.updated_at,
+    "completed_at": Entry.completed_at,
 }
 
 
@@ -83,9 +84,13 @@ def create_entry(db: Session, payload: EntryCreate, username: str) -> Entry:
     data = payload.model_dump(exclude_none=False)
     entry = Entry(**data, username=username)
 
-    # If created as completed, stamp completed_at
-    if entry.status == "completed" and entry.completed_at is None:
-        entry.completed_at = datetime.now(timezone.utc)
+    # If created as completed, use provided completed_at or auto-stamp
+    if entry.status == "completed":
+        if entry.completed_at is None:
+            entry.completed_at = datetime.now(timezone.utc)
+        # Auto-set progress to total to indicate full completion
+        if entry.total is not None:
+            entry.progress = entry.total
 
     db.add(entry)
     db.commit()
@@ -101,9 +106,14 @@ def update_entry(db: Session, entry: Entry, payload: EntryUpdate) -> Entry:
     for field, value in data.items():
         setattr(entry, field, value)
 
-    # Auto-stamp completed_at when status changes to completed
-    if data.get("status") == "completed" and entry.completed_at is None:
-        entry.completed_at = datetime.now(timezone.utc)
+    # Handle completed_at when status changes to completed
+    if data.get("status") == "completed":
+        # Auto-stamp only if completed_at was not explicitly provided in this update
+        if entry.completed_at is None:
+            entry.completed_at = datetime.now(timezone.utc)
+        # Auto-set progress to total
+        if entry.total is not None:
+            entry.progress = entry.total
 
     # Clear completed_at if status moves away from completed
     if data.get("status") and data["status"] != "completed":

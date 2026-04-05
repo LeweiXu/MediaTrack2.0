@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { getEntries, getStats, updateEntry } from '../api.jsx';
 import { statusLabel, badgeClass, fmtDate, progressPercent, progressLabel, timeAgo, extractItems, STATUSES } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
-import EditEntryModal from './components/EditEntryModal.jsx';
+import EntryDetailModal from './components/EntryDetailModal.jsx';
 
 function CoverThumb({ url, title }) {
   return (
@@ -15,10 +15,10 @@ function CoverThumb({ url, title }) {
   );
 }
 
-function MediaRow({ entry, onEdit, onStatusChange }) {
+function MediaRow({ entry, onOpen, onStatusChange }) {
   const pct = progressPercent(entry);
   return (
-    <tr>
+    <tr style={{ cursor: 'pointer' }} onClick={() => onOpen(entry)}>
       <td>
         <div className="cover-cell">
           <CoverThumb url={entry.cover_url} title={entry.title} />
@@ -36,7 +36,7 @@ function MediaRow({ entry, onEdit, onStatusChange }) {
           )}
         </div>
       </td>
-      <td>
+      <td onClick={e => e.stopPropagation()}>
         <select className="inline-select" value={entry.status}
           onChange={e => onStatusChange(entry.id, e.target.value)}>
           {STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
@@ -46,11 +46,6 @@ function MediaRow({ entry, onEdit, onStatusChange }) {
         <span className="rating-cell">
           {entry.rating != null ? entry.rating : '—'}<span>/10</span>
         </span>
-      </td>
-      <td>
-        <div className="action-cell">
-          <button className="icon-btn" onClick={() => onEdit(entry)}>Edit</button>
-        </div>
       </td>
     </tr>
   );
@@ -64,7 +59,7 @@ export default function Dashboard({ onFilterChange }) {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState('');
   const [showAdd,   setShowAdd]   = useState(false);
-  const [editEntry, setEditEntry] = useState(null);
+  const [detailEntry, setDetailEntry] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -116,11 +111,13 @@ export default function Dashboard({ onFilterChange }) {
   const handleUpdated = (updated) => {
     setCurrent(c => c.map(e => e.id === updated.id ? updated : e));
     setRecent(r  => r.map(e => e.id === updated.id ? updated : e));
+    setDetailEntry(updated);
   };
 
   const handleDeleted = (id) => {
     setCurrent(c => c.filter(e => e.id !== id));
     setRecent(r  => r.filter(e => e.id !== id));
+    setDetailEntry(null);
     load();
   };
 
@@ -213,13 +210,13 @@ export default function Dashboard({ onFilterChange }) {
                   <thead>
                     <tr>
                       <th>Title</th><th>Type</th><th>Progress</th>
-                      <th>Status</th><th>Rating</th><th />
+                      <th>Status</th><th>Rating</th>
                     </tr>
                   </thead>
                   <tbody>
                     {current.map(e => (
                       <MediaRow key={e.id} entry={e}
-                        onEdit={setEditEntry} onStatusChange={handleStatusChange} />
+                        onOpen={setDetailEntry} onStatusChange={handleStatusChange} />
                     ))}
                   </tbody>
                 </table>
@@ -234,12 +231,12 @@ export default function Dashboard({ onFilterChange }) {
                   <thead>
                     <tr>
                       <th>Title</th><th>Type</th><th>Completed</th>
-                      <th>Status</th><th>Rating</th><th />
+                      <th>Status</th><th>Rating</th>
                     </tr>
                   </thead>
                   <tbody>
                     {recent.map(e => (
-                      <tr key={e.id}>
+                      <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
                         <td>
                           <div className="cover-cell">
                             <CoverThumb url={e.cover_url} title={e.title} />
@@ -254,7 +251,6 @@ export default function Dashboard({ onFilterChange }) {
                             {e.rating != null ? e.rating : '—'}<span>/10</span>
                           </span>
                         </td>
-                        <td><button className="icon-btn" onClick={() => setEditEntry(e)}>Edit</button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -329,10 +325,10 @@ export default function Dashboard({ onFilterChange }) {
         />
       )}
 
-      {editEntry && (
-        <EditEntryModal
-          entry={editEntry}
-          onClose={() => setEditEntry(null)}
+      {detailEntry && (
+        <EntryDetailModal
+          entry={detailEntry}
+          onClose={() => setDetailEntry(null)}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}
         />
