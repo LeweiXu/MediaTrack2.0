@@ -1,4 +1,4 @@
-export const BASE = 'https://lingweispc.ddns.net:6443';
+export const BASE = import.meta.env.VITE_API_BASE;
 
 const getToken = () => localStorage.getItem('auth_token');
 
