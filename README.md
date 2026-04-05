@@ -2,6 +2,8 @@
 
 A personal web application for tracking all media you consume — films, TV shows, anime, games, books, manga, light novels, web novels, and comics. LOG is a single-user tool designed for home server use, inspired by Letterboxd, MyAnimeList, Goodreads, and Backloggd, but unified in one place.
 
+Deployed and available here: https://log-media-tracker.vercel.app/dashboard
+
 ---
 
 ## Features
@@ -12,7 +14,7 @@ A personal web application for tracking all media you consume — films, TV show
 - **Auto Metadata Search:** Instantly search TMDB, AniList, IGDB, and Google Books to auto-fill entry details.
 - **Manual & Bulk Entry:** Add entries manually or import/export your entire library as JSON or CSV.
 - **Modern UI:** Responsive, clean interface with dark/light mode (coming soon).
-- **Single User, Private:** Designed for personal use, running on your own server.
+- **Multi-User:*** Designed for multiple users, simply register an account to get started.
 
 ---
 
@@ -154,16 +156,6 @@ LOG was built as a personal project to:
 4. **Open in browser:**
 	 - Frontend: [http://localhost:3000](http://localhost:3000)
 	 - Backend: [http://localhost:6443](http://localhost:6443)
-
----
-
-## Roadmap
-
-- [ ] Settings page (dark/light mode, import/export)
-- [ ] Full JSON/CSV export & import
-- [ ] Cover image proxy for CORS
-- [ ] Enhanced statistics (streaks, heatmap, time-to-complete)
-- [ ] Improved search result ranking
 
 ---
 
