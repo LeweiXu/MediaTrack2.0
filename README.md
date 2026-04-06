@@ -8,7 +8,11 @@
 **Public Demo:**
 - Deployed and available for public use: [https://log-media-tracker.vercel.app/dashboard](https://log-media-tracker.vercel.app/dashboard)
 - Anyone can register an account and start using the app immediately.
-
+- Demo user available using:
+    - username: demo_user
+    - password: password1
+- demo_user is refreshed every 24 hours by copying my personal library into demo_user. All previous changes will be wiped as this is a one-way force replace. Feel free to play aroun with demo_user.
+    
 **Scalability:**
 - Built with FastAPI and PostgreSQL, LOG is easily scalable to thousands (and potentially millions) of users, depending on your hosting resources.
 
