@@ -39,33 +39,13 @@ from sqlalchemy.orm import Session
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_BACKEND_DIR))
 
+from constants import (
+    VALID_STATUSES as _VALID_STATUSES_SET,
+    normalise_medium, normalise_origin,
+)
 from db import SessionLocal
 from models import Entry
 from services.search_service import search_media
-
-# ── Medium normalisation ──────────────────────────────────────────────────────
-
-_MEDIUM_MAP: dict[str, str] = {
-    "web novel":    "Web Novel",
-    "webnovel":     "Web Novel",
-    "light novel":  "Light Novel",
-    "anime":        "Anime",
-    "donghua":      "Anime",   # Chinese animation → Anime
-    "manga":        "Manga",
-    "manhwa":       "Manga",   # Korean manga → Manga
-    "manhua":       "Manga",   # Chinese manga → Manga
-    "film":         "Film",
-    "movie":        "Film",
-    "tv show":      "TV Show",
-    "tv":           "TV Show",
-    "book":         "Book",
-    "comics":       "Comics",
-    "comic":        "Comics",
-    "game":         "Game",
-}
-
-def _normalise_medium(raw: str) -> str:
-    return _MEDIUM_MAP.get(raw.strip().lower(), raw.strip())
 
 
 # ── Progress / status parsing ─────────────────────────────────────────────────
@@ -105,96 +85,7 @@ def _parse_date(date_str: str) -> Optional[datetime]:
             continue
     return None
 
-
-# ── Main import logic ─────────────────────────────────────────────────────────
-
-USERNAME = "lingwei"
-SEARCH_DELAY = 0.4  # seconds between API calls to avoid rate limits
-
-
-async def _import_rows(rows: list[dict]) -> None:
-    db = SessionLocal()
-    created = 0
-    skipped = 0
-
-    try:
-        for i, row in enumerate(rows, start=1):
-            title      = row.get("Title", "").strip()
-            raw_medium = row.get("Type", "").strip()
-            objective  = row.get("Objective", "").strip()
-            date_str   = row.get("Date", "").strip()
-            chap_ep    = row.get("Chapter/Episode", "").strip()
-            notes      = row.get("Notes", "").strip() or None
-
-            if not title:
-                print(f"  [{i}] SKIP — empty title")
-                skipped += 1
-                continue
-
-            medium   = _normalise_medium(raw_medium)
-            progress, status = _parse_progress(chap_ep)
-            completed_at     = _parse_date(date_str) if status == "completed" else None
-
-            rating: Optional[float] = None
-            try:
-                rating = float(objective)
-            except (ValueError, TypeError):
-                pass
-
-            # ── Search for metadata ───────────────────────────────────────────
-            cover_url   = None
-            year        = None
-            origin      = None
-            external_id = None
-            source      = None
-            total       = None
-
-            try:
-                results = await search_media(title, medium)
-                if results:
-                    r = results[0]
-                    cover_url   = r.cover_url
-                    year        = r.year
-                    origin      = r.origin
-                    external_id = r.external_id
-                    source      = r.source
-                    total       = r.total
-                    print(f"  [{i}/{len(rows)}] FOUND  '{title}' → '{r.title}' ({r.source})")
-                else:
-                    print(f"  [{i}/{len(rows)}] NO HIT '{title}' (medium={medium})")
-            except Exception as exc:
-                print(f"  [{i}/{len(rows)}] SEARCH ERROR '{title}': {exc}")
-
-            entry = Entry(
-                title=title,
-                medium=medium,
-                origin=origin,
-                year=year,
-                cover_url=cover_url,
-                notes=notes,
-                status=status,
-                rating=rating,
-                progress=progress,
-                total=total,
-                external_id=external_id,
-                source=source,
-                completed_at=completed_at,
-                username=USERNAME,
-            )
-            db.add(entry)
-            db.commit()
-            created += 1
-
-            if i < len(rows):
-                await asyncio.sleep(SEARCH_DELAY)
-
-    finally:
-        db.close()
-
-    print(f"\nDone. Created {created} entries, skipped {skipped}.")
-
-
-_VALID_STATUSES = {"current", "planned", "completed", "on_hold", "dropped"}
+_VALID_STATUSES = _VALID_STATUSES_SET  # alias — canonical set lives in constants.py
 
 # ── Export-format helpers (used by preview/confirm) ───────────────────────────
 
@@ -202,11 +93,13 @@ EXPORT_HEADERS = [
     "title", "medium", "origin", "year", "cover_url", "notes",
     "external_id", "source", "status", "rating", "progress", "total",
     "created_at", "updated_at", "completed_at",
+    "external_url", "genres", "external_rating",
 ]
 
 _COMPARE_FIELDS = [
     "title", "medium", "origin", "year", "cover_url", "notes",
     "external_id", "source", "status", "rating", "progress", "total", "completed_at",
+    "external_url", "genres", "external_rating",
 ]
 
 
@@ -241,19 +134,22 @@ def _csv_to_typed(row: dict) -> dict:
 
     raw_status = _str(row.get("status")) or "planned"
     return {
-        "title":       _str(row.get("title")),
-        "medium":      _str(row.get("medium")),
-        "origin":      _str(row.get("origin")),
-        "year":        _int(row.get("year")),
-        "cover_url":   _str(row.get("cover_url")),
-        "notes":       _str(row.get("notes")),
-        "external_id": _str(row.get("external_id")),
-        "source":      _str(row.get("source")),
-        "status":      raw_status if raw_status in _VALID_STATUSES else "planned",
-        "rating":      _float(row.get("rating")),
-        "progress":    _int(row.get("progress")),
-        "total":       _int(row.get("total")),
-        "completed_at": _dt(row.get("completed_at")),
+        "title":           _str(row.get("title")),
+        "medium":          normalise_medium(_str(row.get("medium"))),
+        "origin":          normalise_origin(_str(row.get("origin"))),
+        "year":            _int(row.get("year")),
+        "cover_url":       _str(row.get("cover_url")),
+        "notes":           _str(row.get("notes")),
+        "external_id":     _str(row.get("external_id")),
+        "source":          _str(row.get("source")),
+        "status":          raw_status if raw_status in _VALID_STATUSES else "planned",
+        "rating":          _float(row.get("rating")),
+        "progress":        _int(row.get("progress")),
+        "total":           _int(row.get("total")),
+        "completed_at":    _dt(row.get("completed_at")),
+        "external_url":    _str(row.get("external_url")),
+        "genres":          _str(row.get("genres")),
+        "external_rating": _float(row.get("external_rating")),
     }
 
 
@@ -381,6 +277,9 @@ def confirm_import(
             progress=typed.get("progress"),
             total=typed.get("total"),
             completed_at=typed.get("completed_at"),
+            external_url=typed.get("external_url"),
+            genres=typed.get("genres"),
+            external_rating=typed.get("external_rating"),
             username=username,
         ))
         created += 1
@@ -397,19 +296,22 @@ def confirm_import(
         if not typed.get("title"):
             skipped += 1
             continue
-        entry.title      = typed["title"]
-        entry.medium     = typed.get("medium")
-        entry.origin     = typed.get("origin")
-        entry.year       = typed.get("year")
-        entry.cover_url  = typed.get("cover_url")
-        entry.notes      = typed.get("notes")
-        entry.external_id = typed.get("external_id")
-        entry.source     = typed.get("source")
-        entry.status     = typed["status"]
-        entry.rating     = typed.get("rating")
-        entry.progress   = typed.get("progress")
-        entry.total      = typed.get("total")
-        entry.completed_at = typed.get("completed_at")
+        entry.title           = typed["title"]
+        entry.medium          = typed.get("medium")
+        entry.origin          = typed.get("origin")
+        entry.year            = typed.get("year")
+        entry.cover_url       = typed.get("cover_url")
+        entry.notes           = typed.get("notes")
+        entry.external_id     = typed.get("external_id")
+        entry.source          = typed.get("source")
+        entry.status          = typed["status"]
+        entry.rating          = typed.get("rating")
+        entry.progress        = typed.get("progress")
+        entry.total           = typed.get("total")
+        entry.completed_at    = typed.get("completed_at")
+        entry.external_url    = typed.get("external_url")
+        entry.genres          = typed.get("genres")
+        entry.external_rating = typed.get("external_rating")
         updated += 1
 
     db.commit()
@@ -470,8 +372,8 @@ def import_csv_for_user(db: Session, csv_content: str, username: str) -> dict:
 
         entry = Entry(
             title=title,
-            medium=_str(row.get("medium")),
-            origin=_str(row.get("origin")),
+            medium=normalise_medium(_str(row.get("medium"))),
+            origin=normalise_origin(_str(row.get("origin"))),
             year=_int(row.get("year")),
             cover_url=_str(row.get("cover_url")),
             notes=_str(row.get("notes")),
@@ -490,21 +392,108 @@ def import_csv_for_user(db: Session, csv_content: str, username: str) -> dict:
     db.commit()
     return {"created": created, "skipped": skipped}
 
+SEARCH_DELAY = 0.4
 
-def main() -> None:
-    csv_path = Path(sys.argv[1]) if len(sys.argv) > 1 else _BACKEND_DIR.parent / "personal.csv"
+def _parse_auto_csv(csv_content: str) -> list[dict]:
+    """
+    Parse a CSV using EXPORT_HEADERS columns.
+    Only 'title' is required; all other columns are optional — missing columns
+    default to empty string (handled downstream as None).
+    """
+    reader = csv.DictReader(io.StringIO(csv_content))
+    rows = []
+    for row in reader:
+        title = (row.get("title") or "").strip()
+        if title:
+            rows.append(row)
+    return rows
 
-    if not csv_path.exists():
-        print(f"ERROR: CSV file not found: {csv_path}")
-        sys.exit(1)
 
-    with open(csv_path, newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        rows = list(reader)
+async def auto_import_rows(csv_content: str, db: Session, username: str):
+    """
+    Async generator that yields event dicts for SSE streaming.
 
-    print(f"Importing {len(rows)} rows from {csv_path} for user '{USERNAME}' …\n")
-    asyncio.run(_import_rows(rows))
+    For each CSV row (title required, all other EXPORT_HEADERS optional):
+      - searches for metadata via search_media()
+      - creates an Entry, overriding metadata fields with search results
+      - yields {"type": "log", "message": "..."}
 
+    Terminates with {"type": "done", "created": N, "skipped": N}.
+    """
+    rows = _parse_auto_csv(csv_content)
+    total = len(rows)
 
-if __name__ == "__main__":
-    main()
+    if total == 0:
+        yield {"type": "done", "created": 0, "skipped": 0}
+        return
+
+    created = skipped = 0
+
+    for i, row in enumerate(rows, start=1):
+        typed = _csv_to_typed(row)
+        title = typed.get("title")
+
+        if not title:
+            skipped += 1
+            yield {"type": "log", "message": f"[{i}/{total}] SKIP — empty title"}
+            continue
+
+        medium = typed.get("medium") or ""
+
+        # ── Search for metadata ───────────────────────────────────────────────
+        cover_url   = typed.get("cover_url")
+        year        = typed.get("year")
+        origin      = typed.get("origin")
+        external_id = typed.get("external_id")
+        source      = typed.get("source")
+        total_ep    = typed.get("total")
+        external_url    = typed.get("external_url")
+        genres          = typed.get("genres")
+        external_rating = typed.get("external_rating")
+
+        try:
+            results = await search_media(title, medium)
+            if results:
+                r = results[0]
+                cover_url       = r.cover_url
+                year            = r.year
+                origin          = r.origin
+                external_id     = r.external_id
+                source          = r.source
+                total_ep        = r.total
+                external_url    = r.external_url
+                genres          = r.genres
+                external_rating = r.external_rating
+                yield {"type": "log", "message": f"[{i}/{total}] FOUND  '{title}' → '{r.title}' ({r.source})"}
+            else:
+                yield {"type": "log", "message": f"[{i}/{total}] NO HIT '{title}' (medium={medium or '—'})"}
+        except Exception as exc:
+            yield {"type": "log", "message": f"[{i}/{total}] ERROR  '{title}': {exc}"}
+
+        entry = Entry(
+            title=title,
+            medium=typed.get("medium"),
+            origin=origin,
+            year=year,
+            cover_url=cover_url,
+            notes=typed.get("notes"),
+            status=typed["status"],
+            rating=typed.get("rating"),
+            progress=typed.get("progress"),
+            total=total_ep,
+            external_id=external_id,
+            source=source,
+            external_url=external_url,
+            genres=genres,
+            external_rating=external_rating,
+            completed_at=typed.get("completed_at"),
+            username=username,
+        )
+        db.add(entry)
+        db.commit()
+        created += 1
+
+        if i < total:
+            await asyncio.sleep(SEARCH_DELAY)
+
+    yield {"type": "done", "created": created, "skipped": skipped}

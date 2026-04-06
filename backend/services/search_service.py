@@ -47,6 +47,18 @@ settings = get_settings()
 
 TIMEOUT = httpx.Timeout(10.0)
 
+# ── TMDB genre ID → name mapping (stable, from TMDB docs) ────────────────────
+
+_TMDB_GENRE_NAMES: dict[int, str] = {
+    28: "Action", 12: "Adventure", 16: "Animation", 35: "Comedy", 80: "Crime",
+    99: "Documentary", 18: "Drama", 10751: "Family", 14: "Fantasy", 36: "History",
+    27: "Horror", 10402: "Music", 9648: "Mystery", 10749: "Romance",
+    878: "Science Fiction", 10770: "TV Movie", 53: "Thriller", 10752: "War",
+    37: "Western", 10759: "Action & Adventure", 10762: "Kids", 10763: "News",
+    10764: "Reality", 10765: "Sci-Fi & Fantasy", 10766: "Soap", 10767: "Talk",
+    10768: "War & Politics",
+}
+
 # ── Medium groupings ──────────────────────────────────────────────────────────
 
 _FILM_MEDIUMS      = {"Film"}
@@ -132,6 +144,12 @@ async def _search_tmdb(
                 cover = (
                     f"https://image.tmdb.org/t/p/w780{poster}" if poster else None
                 )
+                genre_ids = item.get("genre_ids") or []
+                genres_str = ", ".join(
+                    _TMDB_GENRE_NAMES[gid] for gid in genre_ids if gid in _TMDB_GENRE_NAMES
+                ) or None
+                vote_avg = item.get("vote_average")
+                ext_rating = round(float(vote_avg), 1) if vote_avg else None
                 results.append(
                     SearchResult(
                         title=item.get("title") or item.get("name", ""),
@@ -145,6 +163,8 @@ async def _search_tmdb(
                         source="tmdb",
                         description=(item.get("overview") or "")[:200] or None,
                         external_url=f"https://www.themoviedb.org/{tmdb_type}/{item_id}",
+                        genres=genres_str,
+                        external_rating=ext_rating,
                     )
                 )
         except Exception as exc:
@@ -170,6 +190,8 @@ query ($search: String, $type: MediaType) {
       coverImage { extraLarge large medium }
       countryOfOrigin
       description(asHtml: false)
+      genres
+      averageScore
     }
   }
 }
@@ -233,6 +255,9 @@ async def _search_anilist(
                 )
                 origin = _country_to_origin(item.get("countryOfOrigin"))
                 desc = item.get("description") or ""
+                genres_str = ", ".join((item.get("genres") or [])[:5]) or None
+                avg_score = item.get("averageScore")
+                ext_rating = round(avg_score / 10, 1) if avg_score else None
                 results.append(
                     SearchResult(
                         title=display_title,
@@ -245,6 +270,8 @@ async def _search_anilist(
                         source="anilist",
                         description=desc[:200] or None,
                         external_url=f"https://anilist.co/{anilist_type}/{anilist_id}",
+                        genres=genres_str,
+                        external_rating=ext_rating,
                     )
                 )
         except Exception as exc:
@@ -305,6 +332,11 @@ async def _search_jikan(
                 if med == "Manga":
                     if "light novel" in mal_type_field or "novel" in mal_type_field:
                         med = "Light Novel"
+                genres_str = ", ".join(
+                    g["name"] for g in (item.get("genres") or [])[:5] if g.get("name")
+                ) or None
+                score = item.get("score")
+                ext_rating = round(float(score), 1) if score else None
                 results.append(
                     SearchResult(
                         title=display_title,
@@ -317,6 +349,8 @@ async def _search_jikan(
                         source="jikan",
                         description=(item.get("synopsis") or "")[:200] or None,
                         external_url=f"https://myanimelist.net/{mal_type}/{mal_id}",
+                        genres=genres_str,
+                        external_rating=ext_rating,
                     )
                 )
         except Exception as exc:
@@ -377,6 +411,11 @@ async def _search_kitsu(
                     med = "Light Novel"
                 elif med == "Manga" and subtype in ("manhwa",):
                     med = "Comics"
+                avg_rating_str = attrs.get("averageRating")
+                try:
+                    ext_rating = round(float(avg_rating_str) / 10, 1) if avg_rating_str else None
+                except (ValueError, TypeError):
+                    ext_rating = None
                 results.append(
                     SearchResult(
                         title=display_title,
@@ -389,6 +428,7 @@ async def _search_kitsu(
                         source="kitsu",
                         description=(attrs.get("synopsis") or "")[:200] or None,
                         external_url=f"https://kitsu.app/{kitsu_type}/{attrs.get('slug', kitsu_id)}",
+                        external_rating=ext_rating,
                     )
                 )
         except Exception as exc:
@@ -481,6 +521,12 @@ async def _search_mangadex(
             if medium:
                 med_resolved = medium
             mdx_id = item.get("id", "")
+            genre_tags = [
+                t.get("attributes", {}).get("name", {}).get("en", "")
+                for t in attrs.get("tags", [])
+                if t.get("attributes", {}).get("group") == "genre"
+            ]
+            genres_str = ", ".join(g for g in genre_tags[:5] if g) or None
             results.append(
                 SearchResult(
                     title=display_title,
@@ -493,6 +539,7 @@ async def _search_mangadex(
                     source="mangadex",
                     description=(attrs.get("description", {}).get("en") or "")[:200] or None,
                     external_url=f"https://mangadex.org/title/{mdx_id}",
+                    genres=genres_str,
                 )
             )
         return results
@@ -549,7 +596,7 @@ async def _search_igdb(
             content=(
                 f'search "{title}"; '
                 f'fields name,first_release_date,cover.url,cover.image_id,'
-                f'summary,involved_companies.company.name,url; '
+                f'summary,involved_companies.company.name,url,genres.name,rating; '
                 f'limit 5;'
             ),
         )
@@ -573,6 +620,12 @@ async def _search_igdb(
                 cover_url = "https:" + cover_url
             ts = item.get("first_release_date")
             year = datetime.fromtimestamp(ts).year if ts else None
+            igdb_genres = item.get("genres") or []
+            genres_str = ", ".join(
+                g["name"] for g in igdb_genres[:5] if isinstance(g, dict) and g.get("name")
+            ) or None
+            igdb_rating = item.get("rating")
+            ext_rating = round(igdb_rating / 10, 1) if igdb_rating else None
             results.append(
                 SearchResult(
                     title=item.get("name", ""),
@@ -584,6 +637,8 @@ async def _search_igdb(
                     source="igdb",
                     description=(item.get("summary") or "")[:200] or None,
                     external_url=item.get("url"),
+                    genres=genres_str,
+                    external_rating=ext_rating,
                 )
             )
         return results
@@ -623,6 +678,12 @@ async def _search_rawg(
             year = _safe_year(released[:4]) if released else None
             rawg_id = str(item.get("id", ""))
             slug = item.get("slug", rawg_id)
+            rawg_genres = item.get("genres") or []
+            genres_str = ", ".join(
+                g["name"] for g in rawg_genres[:5] if g.get("name")
+            ) or None
+            rawg_rating = item.get("rating")
+            ext_rating = round(float(rawg_rating) * 2, 1) if rawg_rating else None
             results.append(
                 SearchResult(
                     title=item.get("name", ""),
@@ -633,6 +694,8 @@ async def _search_rawg(
                     external_id=rawg_id,
                     source="rawg",
                     external_url=f"https://rawg.io/games/{slug}",
+                    genres=genres_str,
+                    external_rating=ext_rating,
                 )
             )
         return results
@@ -677,6 +740,10 @@ async def _search_google_books(
             year = _safe_year(pub_date)
             pages = info.get("pageCount")
             book_id = item.get("id")
+            categories = info.get("categories") or []
+            genres_str = ", ".join(categories[:5]) or None
+            gb_rating = info.get("averageRating")
+            ext_rating = round(float(gb_rating) * 2, 1) if gb_rating else None
             results.append(
                 SearchResult(
                     title=info.get("title", ""),
@@ -689,6 +756,8 @@ async def _search_google_books(
                     source="google_books",
                     description=(info.get("description") or "")[:200] or None,
                     external_url=f"https://books.google.com/books?id={book_id}" if book_id else None,
+                    genres=genres_str,
+                    external_rating=ext_rating,
                 )
             )
         return results
@@ -875,6 +944,15 @@ async def _search_mangaupdates(
             # Strip HTML tags MangaUpdates sometimes includes in descriptions
             import re
             desc = re.sub(r"<[^>]+>", "", desc)
+            mu_genres = record.get("genres") or []
+            genres_str = ", ".join(
+                g["genre"] for g in mu_genres[:5] if g.get("genre")
+            ) or None
+            bayesian = record.get("bayesian_rating")
+            try:
+                ext_rating = round(float(bayesian), 1) if bayesian else None
+            except (ValueError, TypeError):
+                ext_rating = None
             results.append(
                 SearchResult(
                     title=display_title,
@@ -886,6 +964,8 @@ async def _search_mangaupdates(
                     source="mangaupdates",
                     description=desc[:200] or None,
                     external_url=record.get("url"),
+                    genres=genres_str,
+                    external_rating=ext_rating,
                 )
             )
         return results
@@ -940,14 +1020,21 @@ def _deduplicate_and_rank(
     for items in groups.values():
         items.sort(key=lambda x: _source_rank(x.source))
         best = items[0]
-        # If best has no cover, try to borrow one
-        if not best.cover_url:
-            for fallback in items[1:]:
-                if fallback.cover_url:
-                    best = SearchResult(
-                        **{**best.model_dump(), "cover_url": fallback.cover_url}
-                    )
-                    break
+        patch: dict = {}
+        # Borrow cover_url and genres from lower-priority sources if missing
+        need_cover  = not best.cover_url
+        need_genres = not best.genres
+        for fallback in items[1:]:
+            if need_cover and fallback.cover_url:
+                patch["cover_url"] = fallback.cover_url
+                need_cover = False
+            if need_genres and fallback.genres:
+                patch["genres"] = fallback.genres
+                need_genres = False
+            if not need_cover and not need_genres:
+                break
+        if patch:
+            best = SearchResult(**{**best.model_dump(), **patch})
         deduped.append(best)
 
     # Sort: exact title match first, then source priority

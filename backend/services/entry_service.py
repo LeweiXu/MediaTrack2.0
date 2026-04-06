@@ -131,3 +131,8 @@ def update_entry(db: Session, entry: Entry, payload: EntryUpdate) -> Entry:
 def delete_entry(db: Session, entry: Entry) -> None:
     db.delete(entry)
     db.commit()
+
+
+def delete_all_entries(db: Session, username: str) -> None:
+    db.query(Entry).filter(Entry.username == username).delete()
+    db.commit()

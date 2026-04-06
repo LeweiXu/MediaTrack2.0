@@ -109,9 +109,62 @@ export async function confirmImport(payload) {
   return res.json();
 }
 
+/**
+ * Start an auto-import SSE stream. Returns { reader, abort }.
+ * - onEvent(event): called for each parsed SSE event object
+ * - Call abort() to cancel mid-stream
+ */
+export async function startAutoImport(file, onEvent) {
+  const controller = new AbortController();
+  const form = new FormData();
+  form.append('file', file);
+
+  const res = await fetch(`${BASE}/entries/import/auto`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: form,
+    signal: controller.signal,
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status} ${res.statusText}: ${text}`);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+
+  async function pump() {
+    let buffer = '';
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const chunks = buffer.split('\n\n');
+        buffer = chunks.pop();
+        for (const chunk of chunks) {
+          const dataLine = chunk.split('\n').find(l => l.startsWith('data: '));
+          if (dataLine) {
+            try {
+              onEvent(JSON.parse(dataLine.slice(6)));
+            } catch (_) { /* ignore malformed */ }
+          }
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') throw err;
+    }
+  }
+
+  return { pump, abort: () => controller.abort() };
+}
+
 export const searchMedia = (title, medium = '') => {
   const qs = new URLSearchParams({ title, ...(medium && { medium }) }).toString();
   return req(`/search?${qs}`);
 };
 
 export const getStats = () => req('/stats');
+
+export const deleteAllEntries = () => req('/entries', { method: 'DELETE' });

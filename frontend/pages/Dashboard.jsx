@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getEntries, getStats, updateEntry } from '../api.jsx';
-import { statusLabel, badgeClass, fmtDate, progressPercent, progressLabel, timeAgo, extractItems, STATUSES } from '../utils.jsx';
+import { statusLabel, badgeClass, fmtDate, progressPercent, progressLabel, timeAgo, extractItems, STATUSES, logDotClass } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
 import EntryDetailModal from './components/EntryDetailModal.jsx';
 
@@ -64,14 +64,20 @@ export default function Dashboard({ onFilterChange }) {
   const load = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const [statsData, currentData, completedData] = await Promise.all([
+      const [statsData, currentData, completedData, onHoldData, droppedData, plannedData] = await Promise.all([
         getStats().catch(() => null),
         getEntries({ status: 'current', limit: 20 }),
         getEntries({ status: 'completed', limit: 8, sort: 'updated_at', order: 'desc' }),
+        getEntries({ status: 'on_hold',   limit: 6, sort: 'updated_at', order: 'desc' }),
+        getEntries({ status: 'dropped',   limit: 6, sort: 'updated_at', order: 'desc' }),
+        getEntries({ status: 'planned',   limit: 6, sort: 'updated_at', order: 'desc' }),
       ]);
 
       const currentItems   = extractItems(currentData);
       const completedItems = extractItems(completedData);
+      const onHoldItems    = extractItems(onHoldData);
+      const droppedItems   = extractItems(droppedData);
+      const plannedItems   = extractItems(plannedData);
 
       setStats(statsData);
       setCurrent(currentItems);
@@ -79,7 +85,10 @@ export default function Dashboard({ onFilterChange }) {
 
       const acts = [
         ...completedItems.slice(0, 6).map(e => ({ type: 'completed', entry: e, time: e.updated_at || e.completed_at })),
-        ...currentItems.slice(0, 4).map(e => ({ type: 'started',   entry: e, time: e.created_at })),
+        ...currentItems.slice(0, 4).map(e  => ({ type: 'current',   entry: e, time: e.created_at })),
+        ...onHoldItems.map(e               => ({ type: 'on_hold',   entry: e, time: e.updated_at })),
+        ...droppedItems.map(e              => ({ type: 'dropped',   entry: e, time: e.updated_at })),
+        ...plannedItems.map(e              => ({ type: 'planned',   entry: e, time: e.updated_at })),
       ]
         .filter(a => a.time)
         .sort((a, b) => new Date(b.time) - new Date(a.time))
@@ -285,7 +294,7 @@ export default function Dashboard({ onFilterChange }) {
 
         {monthBars.length > 0 && (
           <>
-            <p className="panel-title">Entries / Month</p>
+            <p className="panel-title">Consumed / Month</p>
             <div className="chart-area">
               {monthBars.slice(-7).map((m, i) => (
                 <div key={i} className="bar-col">
@@ -303,10 +312,14 @@ export default function Dashboard({ onFilterChange }) {
           ? <div style={{ color: 'var(--dim)', fontSize: 11 }}>No recent activity.</div>
           : activity.map((a, i) => (
               <div key={i} className="log-entry">
-                <div className={a.type === 'completed' ? 'log-dot' : 'log-dot blue'} />
+                <div className={logDotClass(a.type)} />
                 <div>
                   <div className="log-text">
-                    {a.type === 'completed' ? 'Completed ' : 'Started '}
+                    {a.type === 'completed' ? 'Completed ' :
+                     a.type === 'current'   ? 'Started ' :
+                     a.type === 'on_hold'   ? 'Put on hold ' :
+                     a.type === 'dropped'   ? 'Dropped ' :
+                     a.type === 'planned'   ? 'Planned ' : ''}
                     <strong>{a.entry.title}</strong>
                     {a.type === 'completed' && a.entry.rating != null
                       ? ` — ${a.entry.rating}/10` : ''}

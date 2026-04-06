@@ -128,7 +128,7 @@ export default function App() {
         <Route path="*"           element={<Navigate to="/dashboard" replace />} />
       </Routes>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onDataDeleted={() => { setShowSettings(false); navigate('/library'); }} />}
 
       {/* ── Footer ── */}
       <footer className="app-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

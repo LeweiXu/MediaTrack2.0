@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { updateEntry, deleteEntry } from '../../api.jsx';
-import { MEDIUMS, STATUSES, statusLabel, fmtDate, progressLabel, externalUrl } from '../../utils.jsx';
+import { MEDIUMS, STATUSES, statusLabel, fmtDate, progressLabel } from '../../utils.jsx';
 
 function toDateInput(iso) {
   if (!iso) return '';
@@ -149,6 +149,19 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
                 </div>
               </div>
 
+              {(current.genres || current.external_rating != null) && (
+                <div className="form-row-2" style={{ marginBottom: 10 }}>
+                  <div>
+                    <div className="form-label">Genres</div>
+                    <div style={{ fontSize: 12 }}>{current.genres || '—'}</div>
+                  </div>
+                  <div>
+                    <div className="form-label">Source Rating</div>
+                    <div>{current.external_rating != null ? `${current.external_rating}/10` : '—'}</div>
+                  </div>
+                </div>
+              )}
+
               <div style={{ marginBottom: 10 }}>
                 <div className="form-label">Completed Date</div>
                 <div>{fmtDate(current.completed_at)}</div>
@@ -166,19 +179,27 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
                 <span>Updated: {fmtDate(current.updated_at)}</span>
               </div>
 
-              {(() => {
-                const url = externalUrl(current.source, current.external_id, current.medium);
-                return url ? (
-                  <div style={{ marginBottom: 14, fontSize: 11 }}>
-                    <a href={url} target="_blank" rel="noopener noreferrer"
-                      style={{ color: 'var(--accent)', textDecoration: 'none' }}
-                      onMouseOver={e => e.target.style.textDecoration = 'underline'}
-                      onMouseOut={e => e.target.style.textDecoration = 'none'}>
-                      View on {current.source === 'google_books' ? 'Google Books' : current.source === 'tmdb' ? 'TMDB' : current.source === 'anilist' ? 'AniList' : current.source} ↗
-                    </a>
-                  </div>
-                ) : null;
-              })()}
+              {current.external_url && (
+                <div style={{ marginBottom: 14, fontSize: 11 }}>
+                  <a href={current.external_url} target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'var(--accent)', textDecoration: 'none' }}
+                    onMouseOver={e => e.target.style.textDecoration = 'underline'}
+                    onMouseOut={e => e.target.style.textDecoration = 'none'}>
+                    {current.source === 'google_books' ? 'View on Google Books' :
+                     current.source === 'tmdb'         ? 'View on TMDB' :
+                     current.source === 'anilist'      ? 'View on AniList' :
+                     current.source === 'jikan'        ? 'View on MyAnimeList' :
+                     current.source === 'kitsu'        ? 'View on Kitsu' :
+                     current.source === 'mangadex'     ? 'View on MangaDex' :
+                     current.source === 'igdb'         ? 'View on IGDB' :
+                     current.source === 'rawg'         ? 'View on RAWG' :
+                     current.source === 'comicvine'    ? 'View on Comic Vine' :
+                     current.source === 'mangaupdates' ? 'View on MangaUpdates' :
+                     current.source === 'open_library' ? 'View on Open Library' :
+                     'View source'} ↗
+                  </a>
+                </div>
+              )}
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>

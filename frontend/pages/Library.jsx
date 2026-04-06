@@ -4,6 +4,7 @@ import { statusLabel, fmtDate, progressPercent, progressLabel, extractItems, MED
 import AddEntryModal from './components/AddEntryModal.jsx';
 import EntryDetailModal from './components/EntryDetailModal.jsx';
 import ImportModal from './components/ImportModal.jsx';
+import ImportAutoModal from './components/ImportAutoModal.jsx';
 
 const SORT_FIELDS = [
   { key: 'title',        label: 'Title' },
@@ -131,7 +132,8 @@ export default function Library({ initialFilters = {} }) {
     </th>
   );
 
-  const [showImport, setShowImport] = useState(false);
+  const [showImport,     setShowImport]     = useState(false);
+  const [showImportAuto, setShowImportAuto] = useState(false);
 
   async function exportCSV() {
     try {
@@ -388,6 +390,10 @@ export default function Library({ initialFilters = {} }) {
           onClick={() => setShowImport(true)}>
           Import CSV
         </button>
+        <button className="icon-btn" style={{ textAlign: 'left', padding: '6px 10px', width: '100%', marginTop: 4 }}
+          onClick={() => setShowImportAuto(true)}>
+          Import (auto-search)
+        </button>
 
         <div style={{ marginTop: 20 }}>
           <p className="panel-title">Showing</p>
@@ -428,6 +434,13 @@ export default function Library({ initialFilters = {} }) {
       {showImport && (
         <ImportModal
           onClose={() => setShowImport(false)}
+          onImported={() => { load(); }}
+        />
+      )}
+
+      {showImportAuto && (
+        <ImportAutoModal
+          onClose={() => setShowImportAuto(false)}
           onImported={() => { load(); }}
         />
       )}

@@ -15,7 +15,7 @@ export default function AddEntryModal({ onClose, onCreated }) {
   const [form, setForm] = useState({
     title: '', medium: '', origin: '', status: 'current',
     year: '', rating: '', progress: '', total: '', cover_url: '', notes: '',
-    completed_at: '',
+    completed_at: '', external_url: '', genres: '', external_rating: '',
   });
 
   const today = () => new Date().toISOString().slice(0, 10);
@@ -57,8 +57,11 @@ export default function AddEntryModal({ onClose, onCreated }) {
       total:       item.total       || '',
       cover_url:   item.cover_url   || item.cover || '',
       notes:       '',
-      external_id: item.id          || item.external_id || '',
-      source:      item.source      || '',
+      external_id:     item.id              || item.external_id    || '',
+      source:          item.source          || '',
+      external_url:    item.external_url    || '',
+      genres:          item.genres          || '',
+      external_rating: item.external_rating ?? '',
     });
     setTab('manual');
   }
@@ -72,9 +75,10 @@ export default function AddEntryModal({ onClose, onCreated }) {
         ...form,
         year:         form.year         !== '' ? parseInt(form.year)       : undefined,
         rating:       form.rating       !== '' ? parseFloat(form.rating)   : undefined,
-        progress:     form.progress     !== '' ? parseInt(form.progress)   : undefined,
-        total:        form.total        !== '' ? parseInt(form.total)      : undefined,
-        completed_at: form.completed_at ? form.completed_at + 'T00:00:00Z' : undefined,
+        progress:        form.progress        !== '' ? parseInt(form.progress)          : undefined,
+        total:           form.total           !== '' ? parseInt(form.total)             : undefined,
+        completed_at:    form.completed_at    ? form.completed_at + 'T00:00:00Z'        : undefined,
+        external_rating: form.external_rating !== '' ? parseFloat(form.external_rating) : undefined,
       };
       const created = await createEntry(payload);
       onCreated(created);

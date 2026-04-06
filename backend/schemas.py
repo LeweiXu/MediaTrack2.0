@@ -4,7 +4,11 @@ from datetime import datetime
 from typing import Optional
 from pydantic import BaseModel, Field, field_validator
 
-VALID_STATUSES = {"current", "planned", "completed", "on_hold", "dropped"}
+from constants import (
+    VALID_STATUSES, VALID_MEDIUMS, VALID_ORIGINS,
+    normalise_medium, normalise_origin,
+)
+
 
 class EntryBase(BaseModel):
     title:       str             = Field(..., min_length=1, max_length=500)
@@ -17,8 +21,11 @@ class EntryBase(BaseModel):
     rating:      Optional[float] = Field(None, ge=0, le=10)
     progress:    Optional[int]   = Field(None, ge=0)
     total:       Optional[int]   = Field(None, ge=0)
-    external_id: Optional[str]   = Field(None, max_length=200)
-    source:      Optional[str]   = Field(None, max_length=100)
+    external_id:     Optional[str]   = Field(None, max_length=200)
+    source:          Optional[str]   = Field(None, max_length=100)
+    external_url:    Optional[str]   = Field(None, max_length=1000)
+    genres:          Optional[str]   = Field(None, max_length=500)
+    external_rating: Optional[float] = Field(None, ge=0, le=100)
 
     @field_validator("status")
     @classmethod
@@ -26,6 +33,27 @@ class EntryBase(BaseModel):
         if v not in VALID_STATUSES:
             raise ValueError(f"status must be one of {sorted(VALID_STATUSES)}")
         return v
+
+    @field_validator("medium")
+    @classmethod
+    def validate_medium(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        normalised = normalise_medium(v)
+        if normalised not in VALID_MEDIUMS:
+            raise ValueError(f"medium must be one of {sorted(VALID_MEDIUMS)}")
+        return normalised
+
+    @field_validator("origin")
+    @classmethod
+    def validate_origin(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        normalised = normalise_origin(v)
+        if normalised not in VALID_ORIGINS:
+            raise ValueError(f"origin must be one of {sorted(VALID_ORIGINS)}")
+        return normalised
+
 
 class EntryCreate(EntryBase):
     completed_at: Optional[datetime] = None
@@ -41,9 +69,12 @@ class EntryUpdate(BaseModel):
     rating:       Optional[float]    = Field(None, ge=0, le=10)
     progress:     Optional[int]      = Field(None, ge=0)
     total:        Optional[int]      = Field(None, ge=0)
-    external_id:  Optional[str]      = Field(None, max_length=200)
-    source:       Optional[str]      = Field(None, max_length=100)
-    completed_at: Optional[datetime] = None
+    external_id:     Optional[str]      = Field(None, max_length=200)
+    source:          Optional[str]      = Field(None, max_length=100)
+    external_url:    Optional[str]      = Field(None, max_length=1000)
+    genres:          Optional[str]      = Field(None, max_length=500)
+    external_rating: Optional[float]    = Field(None, ge=0, le=100)
+    completed_at:    Optional[datetime] = None
 
     @field_validator("status")
     @classmethod
@@ -51,6 +82,26 @@ class EntryUpdate(BaseModel):
         if v is not None and v not in VALID_STATUSES:
             raise ValueError(f"status must be one of {sorted(VALID_STATUSES)}")
         return v
+
+    @field_validator("medium")
+    @classmethod
+    def validate_medium(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        normalised = normalise_medium(v)
+        if normalised not in VALID_MEDIUMS:
+            raise ValueError(f"medium must be one of {sorted(VALID_MEDIUMS)}")
+        return normalised
+
+    @field_validator("origin")
+    @classmethod
+    def validate_origin(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        normalised = normalise_origin(v)
+        if normalised not in VALID_ORIGINS:
+            raise ValueError(f"origin must be one of {sorted(VALID_ORIGINS)}")
+        return normalised
 
 class EntryRead(EntryBase):
     id:           int
@@ -89,16 +140,18 @@ class ChangePassword(BaseModel):
 # --- Search Schemas ---
 from pydantic import BaseModel
 class SearchResult(BaseModel):
-    title:        str
-    medium:       Optional[str] = None
-    origin:       Optional[str] = None
-    year:         Optional[int] = None
-    cover_url:    Optional[str] = None
-    total:        Optional[int] = None
-    external_id:  Optional[str] = None
-    source:       str = ""
-    description:  Optional[str] = None
-    external_url: Optional[str] = None
+    title:           str
+    medium:          Optional[str]   = None
+    origin:          Optional[str]   = None
+    year:            Optional[int]   = None
+    cover_url:       Optional[str]   = None
+    total:           Optional[int]   = None
+    external_id:     Optional[str]   = None
+    source:          str             = ""
+    description:     Optional[str]   = None
+    external_url:    Optional[str]   = None
+    genres:          Optional[str]   = None
+    external_rating: Optional[float] = None
 
 # --- Import Schemas ---
 from typing import Any

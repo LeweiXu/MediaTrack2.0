@@ -56,19 +56,20 @@ def get_stats(db: Session, username: str) -> StatsResponse:
 
     by_origin = [OriginCount(origin=r.origin, count=r.cnt) for r in origin_rows]
 
-    # ── Entries per month (last 12 months, based on created_at) ──────────────
+    # ── Consumed per month (last 12 months, based on completed_at) ──────────────
     month_rows = db.execute(
         select(
-            func.to_char(Entry.created_at, "YYYY-MM").label("key"),
-            func.to_char(Entry.created_at, "Mon YY").label("label"),
+            func.to_char(Entry.completed_at, "YYYY-MM").label("key"),
+            func.to_char(Entry.completed_at, "Mon YY").label("label"),
             func.count().label("cnt"),
         )
         .where(Entry.username == username)
+        .where(Entry.completed_at.is_not(None))
         .group_by(
-            func.to_char(Entry.created_at, "YYYY-MM"),
-            func.to_char(Entry.created_at, "Mon YY"),
+            func.to_char(Entry.completed_at, "YYYY-MM"),
+            func.to_char(Entry.completed_at, "Mon YY"),
         )
-        .order_by(func.to_char(Entry.created_at, "YYYY-MM").asc())
+        .order_by(func.to_char(Entry.completed_at, "YYYY-MM").asc())
         .limit(12)
     ).all()
 

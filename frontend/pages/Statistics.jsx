@@ -79,10 +79,11 @@ function deriveStats(entries) {
   rated.forEach(e => { const r = Math.round(e.rating); if (r >= 1 && r <= 10) buckets[r]++; });
   const rating_dist = Object.entries(buckets).map(([r, count]) => ({ rating: parseInt(r), count }));
 
-  // Entries per month
+  // Consumed per month (completed entries only, based on completed_at)
   const monthMap = {};
   entries.forEach(e => {
-    const d = new Date(e.created_at || e.updated_at);
+    if (!e.completed_at) return;
+    const d = new Date(e.completed_at);
     if (isNaN(d)) return;
     const key   = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     const label = d.toLocaleDateString('en-GB', { month: 'short', year: '2-digit' });
@@ -189,7 +190,7 @@ export default function Statistics() {
             {/* Entries per month */}
             {s.entries_per_month?.length > 0 && (
               <div className="chart-section">
-                <div className="chart-section-title">Entries Added per Month</div>
+                <div className="chart-section-title">Consumed per Month</div>
                 <div className="chart-box">
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={s.entries_per_month} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
@@ -197,7 +198,7 @@ export default function Statistics() {
                       <XAxis dataKey="label" tick={{ fill: 'var(--dim)', fontSize: 10 }} axisLine={false} tickLine={false} />
                       <YAxis tick={{ fill: 'var(--dim)', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
                       <Tooltip content={<Tooltip_ />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                      <Bar dataKey="count" fill="var(--accent)" opacity={0.7} radius={[2, 2, 0, 0]} name="Entries" />
+                      <Bar dataKey="count" fill="var(--accent)" opacity={0.7} radius={[2, 2, 0, 0]} name="Consumed" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>

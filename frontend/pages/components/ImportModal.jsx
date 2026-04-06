@@ -193,7 +193,7 @@ export default function ImportModal({ onClose, onImported }) {
                 skipped automatically; partial matches let you choose which version to keep.
               </p>
               <input ref={fileRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleFile} />
-              <button className="btn-primary" onClick={() => fileRef.current.click()}>
+              <button className="btn" onClick={() => fileRef.current.click()}>
                 Choose File
               </button>
             </div>

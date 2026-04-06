@@ -1,0 +1,91 @@
+"""
+Single source of truth for the canonical allowed values of constrained Entry fields.
+
+Rules:
+  - VALID_STATUSES  : allowed values for Entry.status
+  - VALID_MEDIUMS   : allowed values for Entry.medium
+  - VALID_ORIGINS   : allowed values for Entry.origin
+
+Normalisation maps convert common aliases / wrong-case inputs to their canonical
+form.  normalise_*() returns None unchanged so optional fields compose cleanly.
+"""
+from __future__ import annotations
+
+# ── Statuses ──────────────────────────────────────────────────────────────────
+
+VALID_STATUSES: frozenset[str] = frozenset({
+    "current", "planned", "completed", "on_hold", "dropped",
+})
+
+# ── Mediums ───────────────────────────────────────────────────────────────────
+
+VALID_MEDIUMS: frozenset[str] = frozenset({
+    "Film", "TV Show", "Anime", "Book", "Manga",
+    "Light Novel", "Web Novel", "Comics", "Game",
+})
+
+# Keys are lowercase aliases; values are canonical forms.
+MEDIUM_NORMALISE_MAP: dict[str, str] = {
+    # Web / light novel
+    "web novel":   "Web Novel",
+    "webnovel":    "Web Novel",
+    "light novel": "Light Novel",
+    # Anime / animation
+    "anime":    "Anime",
+    "donghua":  "Anime",   # Chinese animation
+    # Manga variants
+    "manga":    "Manga",
+    "manhwa":   "Manga",   # Korean
+    "manhua":   "Manga",   # Chinese
+    # Film
+    "film":  "Film",
+    "movie": "Film",
+    # TV
+    "tv show": "TV Show",
+    "tv":      "TV Show",
+    # Other
+    "book":   "Book",
+    "comics": "Comics",
+    "comic":  "Comics",
+    "game":   "Game",
+}
+
+
+def normalise_medium(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    return MEDIUM_NORMALISE_MAP.get(raw.strip().lower(), raw.strip())
+
+
+# ── Origins ───────────────────────────────────────────────────────────────────
+
+VALID_ORIGINS: frozenset[str] = frozenset({
+    "Japanese", "Korean", "Chinese", "Western", "Other",
+})
+
+ORIGIN_NORMALISE_MAP: dict[str, str] = {
+    "japanese": "Japanese",
+    "japan":    "Japanese",
+    "jp":       "Japanese",
+    "korean":   "Korean",
+    "korea":    "Korean",
+    "kr":       "Korean",
+    "chinese":  "Chinese",
+    "china":    "Chinese",
+    "cn":       "Chinese",
+    "western":  "Western",
+    "american": "Western",
+    "english":  "Western",
+    "usa":      "Western",
+    "us":       "Western",
+    "uk":       "Western",
+    "europe":   "Western",
+    "eu":       "Western",
+    "other":    "Other",
+}
+
+
+def normalise_origin(raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    return ORIGIN_NORMALISE_MAP.get(raw.strip().lower(), raw.strip())

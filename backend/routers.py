@@ -1,5 +1,6 @@
 import io
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+import json
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -12,11 +13,12 @@ from schemas import (
     UserCreate, UserRead, Token, ChangePassword,
 )
 from services import entry_service
+from services.entry_service import delete_all_entries
 from services import auth_service
 from services.search_service import search_media
 from services.stats_service import get_stats
 from services.export_service import export_entries_csv
-from services.import_service import preview_import, confirm_import
+from services.import_service import preview_import, confirm_import, auto_import_rows
 
 router = APIRouter()
 
@@ -95,6 +97,28 @@ def import_confirm(
     to_update = [{"db_id": item.db_id, "csv_row": item.csv_row} for item in payload.to_update]
     return confirm_import(db, payload.to_create, to_update, current_user.username)
 
+@router.post("/entries/import/auto")
+async def import_auto(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(auth_service.get_current_user),
+):
+    content = (await file.read()).decode("utf-8-sig")
+
+    async def event_stream():
+        async for event in auto_import_rows(content, db, current_user.username):
+            if await request.is_disconnected():
+                break
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 @router.get("/entries", response_model=EntryListResponse)
 def list_entries(
     status: str = Query(None, description="Filter by status"),
@@ -151,6 +175,13 @@ def update_entry(
     if not entry or entry.username != current_user.username:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entry not found")
     return entry_service.update_entry(db, entry, payload)
+
+@router.delete("/entries", status_code=status.HTTP_204_NO_CONTENT)
+def delete_all_user_entries(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(auth_service.get_current_user),
+):
+    delete_all_entries(db, current_user.username)
 
 @router.delete("/entries/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_entry(
