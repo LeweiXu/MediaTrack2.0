@@ -21,6 +21,8 @@
 - Enable search by URL for supported sources.
 - Current auto-search for details when adding new entry is slow, may need to enforce source selection to speed things up (no way to speed up API calls).
 - Possibly write a script for auto-scraping details from URL for unsupported sites. Will be very difficult due to different site structure/html. Additionally could build companion extension to allow scraping of websites without APIs.
+- Display source when searching new entry details.
+- Add settings page for various settings: e.g. default search on library page, default source selection when searching for new entries + currently implemented settings (change password and wipe data).
     
 **Scalability:**
 - Built with FastAPI and PostgreSQL, LOG is easily scalable to thousands (and potentially millions) of users, depending on your hosting resources.
