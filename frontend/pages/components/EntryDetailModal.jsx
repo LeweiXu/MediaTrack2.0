@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { updateEntry, deleteEntry } from '../../api.jsx';
-import { MEDIUMS, STATUSES, statusLabel, fmtDate, progressLabel } from '../../utils.jsx';
+import { MEDIUMS, STATUSES, statusLabel, fmtDate, progressLabel, inferSourceFromUrl } from '../../utils.jsx';
 
 function toDateInput(iso) {
   if (!iso) return '';
@@ -27,6 +27,8 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
     cover_url:    entry.cover_url    || '',
     notes:        entry.notes        || '',
     completed_at: toDateInput(entry.completed_at),
+    external_url: entry.external_url || '',
+    source:       entry.source       || '',
   });
 
   const setField = (k, v) => setForm(f => {
@@ -37,6 +39,7 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
     }
     if (k === 'status' && v !== 'completed') next.completed_at = '';
     if (k === 'total' && f.status === 'completed' && v !== '') next.progress = v;
+    if (k === 'external_url') next.source = inferSourceFromUrl(v);
     return next;
   });
 
@@ -90,6 +93,8 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
       cover_url:    current.cover_url    || '',
       notes:        current.notes        || '',
       completed_at: toDateInput(current.completed_at),
+      external_url: current.external_url || '',
+      source:       current.source       || '',
     });
     setErr('');
     setConfirmDelete(false);
@@ -185,18 +190,7 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
                     style={{ color: 'var(--accent)', textDecoration: 'none' }}
                     onMouseOver={e => e.target.style.textDecoration = 'underline'}
                     onMouseOut={e => e.target.style.textDecoration = 'none'}>
-                    {current.source === 'google_books' ? 'View on Google Books' :
-                     current.source === 'tmdb'         ? 'View on TMDB' :
-                     current.source === 'anilist'      ? 'View on AniList' :
-                     current.source === 'jikan'        ? 'View on MyAnimeList' :
-                     current.source === 'kitsu'        ? 'View on Kitsu' :
-                     current.source === 'mangadex'     ? 'View on MangaDex' :
-                     current.source === 'igdb'         ? 'View on IGDB' :
-                     current.source === 'rawg'         ? 'View on RAWG' :
-                     current.source === 'comicvine'    ? 'View on Comic Vine' :
-                     current.source === 'mangaupdates' ? 'View on MangaUpdates' :
-                     current.source === 'open_library' ? 'View on Open Library' :
-                     'View source'} ↗
+                    External Source ↗
                   </a>
                 </div>
               )}
@@ -275,6 +269,18 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
                 <label className="form-label">Cover URL</label>
                 <input className="form-input" value={form.cover_url}
                   onChange={e => setField('cover_url', e.target.value)} />
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Source URL</label>
+                <input className="form-input" value={form.external_url}
+                  placeholder="https://novelupdates.com/series/…"
+                  onChange={e => setField('external_url', e.target.value)} />
+                {form.source && (
+                  <span style={{ fontSize: 11, color: 'var(--accent)', marginTop: 3 }}>
+                    Source: {form.source}
+                  </span>
+                )}
               </div>
 
               <div className="form-row">

@@ -89,3 +89,36 @@ def normalise_origin(raw: str | None) -> str | None:
     if raw is None:
         return None
     return ORIGIN_NORMALISE_MAP.get(raw.strip().lower(), raw.strip())
+
+
+# ── Source / URL ──────────────────────────────────────────────────────────────
+
+# Maps a URL hostname fragment to its canonical source name.
+SOURCE_URL_MAP: dict[str, str] = {
+    "themoviedb.org":         "tmdb",
+    "anilist.co":             "anilist",
+    "myanimelist.net":        "jikan",
+    "kitsu.io":               "kitsu",
+    "novelupdates.com":       "novelupdates",
+    "mangadex.org":           "mangadex",
+    "igdb.com":               "igdb",
+    "rawg.io":                "rawg",
+    "books.google.com":       "google_books",
+    "openlibrary.org":        "open_library",
+    "comicvine.gamespot.com": "comicvine",
+    "mangaupdates.com":       "mangaupdates",
+    "baka-updates.com":       "mangaupdates",
+}
+
+VALID_SOURCES: frozenset[str] = frozenset(SOURCE_URL_MAP.values())
+
+
+def infer_source_from_url(url: str | None) -> str | None:
+    """Return the canonical source name for a URL, or None if unrecognised."""
+    if not url:
+        return None
+    url_lower = url.lower()
+    for domain, source in SOURCE_URL_MAP.items():
+        if domain in url_lower:
+            return source
+    return None

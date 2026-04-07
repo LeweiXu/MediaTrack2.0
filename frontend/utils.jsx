@@ -58,11 +58,38 @@ export function progressLabel(entry) {
   if (!entry) return '—';
   const { progress, total, medium } = entry;
   if (!progress && !total) return '—';
-  const isWebNovel = medium?.toLowerCase() === 'web novel';
-  const isBook = medium?.toLowerCase().includes('book') || medium?.toLowerCase().includes('novel');
-  const unit = isWebNovel ? 'ch.' : isBook ? 'p.' : 'ep.';
+  const m = medium?.toLowerCase() ?? '';
+  const unit = m === 'book' ? 'p.'
+             : (m === 'manga' || m === 'light novel' || m === 'web novel' || m === 'comics') ? 'ch.'
+             : 'ep.';
   if (total) return `${progress ?? '?'} / ${total} ${unit}`;
   return `${progress} ${unit}`;
+}
+
+const _SOURCE_DOMAINS = {
+  'themoviedb.org':         'tmdb',
+  'anilist.co':             'anilist',
+  'myanimelist.net':        'jikan',
+  'kitsu.io':               'kitsu',
+  'novelupdates.com':       'novelupdates',
+  'mangadex.org':           'mangadex',
+  'igdb.com':               'igdb',
+  'rawg.io':                'rawg',
+  'books.google.com':       'google_books',
+  'openlibrary.org':        'open_library',
+  'comicvine.gamespot.com': 'comicvine',
+  'mangaupdates.com':       'mangaupdates',
+  'baka-updates.com':       'mangaupdates',
+};
+
+/** Infer the source name from a URL, or return '' if unrecognised. */
+export function inferSourceFromUrl(url) {
+  if (!url) return '';
+  const lower = url.toLowerCase();
+  for (const [domain, source] of Object.entries(_SOURCE_DOMAINS)) {
+    if (lower.includes(domain)) return source;
+  }
+  return '';
 }
 
 /** Build a link to the entry's page on its external source database */

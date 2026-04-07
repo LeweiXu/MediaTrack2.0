@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { searchMedia, createEntry } from '../../api.jsx';
-import { MEDIUMS, STATUSES, statusLabel } from '../../utils.jsx';
+import { MEDIUMS, STATUSES, statusLabel, inferSourceFromUrl } from '../../utils.jsx';
 
 export default function AddEntryModal({ onClose, onCreated }) {
   const [tab,        setTab]        = useState('search');
@@ -28,6 +28,7 @@ export default function AddEntryModal({ onClose, onCreated }) {
     }
     if (k === 'status' && v !== 'completed') next.completed_at = '';
     if (k === 'total' && f.status === 'completed' && v !== '') next.progress = v;
+    if (k === 'external_url') next.source = inferSourceFromUrl(v);
     return next;
   });
 
@@ -255,6 +256,17 @@ export default function AddEntryModal({ onClose, onCreated }) {
                 <label className="form-label">Cover URL</label>
                 <input className="form-input" value={form.cover_url} placeholder="https://…"
                   onChange={e => setField('cover_url', e.target.value)} />
+              </div>
+
+              <div className="form-row">
+                <label className="form-label">Source URL</label>
+                <input className="form-input" value={form.external_url} placeholder="https://novelupdates.com/series/…"
+                  onChange={e => setField('external_url', e.target.value)} />
+                {form.source && (
+                  <span style={{ fontSize: 11, color: 'var(--accent)', marginTop: 3 }}>
+                    Source: {form.source}
+                  </span>
+                )}
               </div>
 
               <div className="form-row">

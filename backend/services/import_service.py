@@ -394,6 +394,23 @@ def import_csv_for_user(db: Session, csv_content: str, username: str) -> dict:
 
 SEARCH_DELAY = 0.4
 
+_PUNCT_RE = re.compile(r"[^\w\s]")
+
+def _titles_similar(csv_title: str, result_title: str, threshold: float = 0.4) -> bool:
+    """
+    Returns True if result_title is close enough to csv_title to replace it.
+    Uses token-overlap: |shared| / max(|csv_tokens|, |result_tokens|) >= threshold.
+    """
+    def _tokens(s: str) -> set[str]:
+        return set(_PUNCT_RE.sub(" ", s.lower()).split())
+
+    csv_tokens    = _tokens(csv_title)
+    result_tokens = _tokens(result_title)
+    if not csv_tokens or not result_tokens:
+        return False
+    shared = csv_tokens & result_tokens
+    return len(shared) / max(len(csv_tokens), len(result_tokens)) >= threshold
+
 def _parse_auto_csv(csv_content: str) -> list[dict]:
     """
     Parse a CSV using EXPORT_HEADERS columns.
@@ -464,7 +481,12 @@ async def auto_import_rows(csv_content: str, db: Session, username: str):
                 external_url    = r.external_url
                 genres          = r.genres
                 external_rating = r.external_rating
-                yield {"type": "log", "message": f"[{i}/{total}] FOUND  '{title}' → '{r.title}' ({r.source})"}
+                if _titles_similar(title, r.title):
+                    display = f"'{title}' → '{r.title}'" if r.title != title else f"'{title}'"
+                    title = r.title
+                else:
+                    display = f"'{title}' (kept; result was '{r.title}')"
+                yield {"type": "log", "message": f"[{i}/{total}] FOUND  {display} ({r.source})"}
             else:
                 yield {"type": "log", "message": f"[{i}/{total}] NO HIT '{title}' (medium={medium or '—'})"}
         except Exception as exc:

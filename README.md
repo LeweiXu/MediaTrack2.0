@@ -39,12 +39,8 @@
 ---
 
 **TODO**
-- Enable editing of source and source link in both manual entry and editing library entry.
-- Deleting and/or editing an entry directly on the library page shouldn't reload the whole page.
+- Deleting and/or editing an entry directly on the library page shouldn't reload the whole page (debating on implementation here).
 - Add 'author' field for entry table, possibly split entry table into 2: entry + media to reduce redudancy.
-- When importing via the auto-search functionality should use title returned by first match instead of what was in the csv. Confirm with user if soft-match isn't close enough.
-- Progress unit for manga should be ch. not ep.
-- When auto-searching a new entry, allow filtering by source, not just medium. 
 
 ## 2. Technical Details & Local Development
 

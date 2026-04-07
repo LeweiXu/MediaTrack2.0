@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import { updateEntry, deleteEntry } from '../../api.jsx';
-import { MEDIUMS, STATUSES, statusLabel } from '../../utils.jsx';
+import { MEDIUMS, STATUSES, statusLabel, inferSourceFromUrl } from '../../utils.jsx';
 
 export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted }) {
   const [form, setForm] = useState({
-    title:     entry.title     || '',
-    medium:    entry.medium    || '',
-    origin:    entry.origin    || '',
-    status:    entry.status    || 'planned',
-    year:      entry.year      || '',
-    rating:    entry.rating    ?? '',
-    progress:  entry.progress  ?? '',
-    total:     entry.total     ?? '',
-    cover_url: entry.cover_url || '',
-    notes:     entry.notes     || '',
+    title:        entry.title        || '',
+    medium:       entry.medium       || '',
+    origin:       entry.origin       || '',
+    status:       entry.status       || 'planned',
+    year:         entry.year         || '',
+    rating:       entry.rating       ?? '',
+    progress:     entry.progress     ?? '',
+    total:        entry.total        ?? '',
+    cover_url:    entry.cover_url    || '',
+    notes:        entry.notes        || '',
+    external_url: entry.external_url || '',
+    source:       entry.source       || '',
   });
 
   const [saving,         setSaving]         = useState(false);
@@ -21,7 +23,11 @@ export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted })
   const [err,            setErr]            = useState('');
   const [confirmDelete,  setConfirmDelete]  = useState(false);
 
-  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const setField = (k, v) => setForm(f => {
+    const next = { ...f, [k]: v };
+    if (k === 'external_url') next.source = inferSourceFromUrl(v);
+    return next;
+  });
 
   async function handleSave(e) {
     e.preventDefault();
@@ -124,6 +130,17 @@ export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted })
               <label className="form-label">Cover URL</label>
               <input className="form-input" value={form.cover_url}
                 onChange={e => setField('cover_url', e.target.value)} />
+            </div>
+
+            <div className="form-row">
+              <label className="form-label">Source URL</label>
+              <input className="form-input" value={form.external_url} placeholder="https://novelupdates.com/series/…"
+                onChange={e => setField('external_url', e.target.value)} />
+              {form.source && (
+                <span style={{ fontSize: 11, color: 'var(--accent)', marginTop: 3 }}>
+                  Source: {form.source}
+                </span>
+              )}
             </div>
 
             <div className="form-row">
