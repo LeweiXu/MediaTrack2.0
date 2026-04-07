@@ -21,7 +21,7 @@ VALID_STATUSES: frozenset[str] = frozenset({
 
 VALID_MEDIUMS: frozenset[str] = frozenset({
     "Film", "TV Show", "Anime", "Book", "Manga",
-    "Light Novel", "Web Novel", "Comics", "Game",
+    "Light Novel", "Web Novel", "Comics", "Game", "Visual Novel",
 })
 
 # Keys are lowercase aliases; values are canonical forms.
@@ -43,6 +43,9 @@ MEDIUM_NORMALISE_MAP: dict[str, str] = {
     # TV
     "tv show": "TV Show",
     "tv":      "TV Show",
+    # Visual novel
+    "visual novel": "Visual Novel",
+    "vn":           "Visual Novel",
     # Other
     "book":   "Book",
     "comics": "Comics",
@@ -108,6 +111,7 @@ SOURCE_URL_MAP: dict[str, str] = {
     "comicvine.gamespot.com": "comicvine",
     "mangaupdates.com":       "mangaupdates",
     "baka-updates.com":       "mangaupdates",
+    "vndb.org":               "vndb",
 }
 
 VALID_SOURCES: frozenset[str] = frozenset(SOURCE_URL_MAP.values())

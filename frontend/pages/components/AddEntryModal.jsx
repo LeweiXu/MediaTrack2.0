@@ -191,6 +191,7 @@ export default function AddEntryModal({ onClose, onCreated }) {
                   <option value="google_books">Google Books</option>
                   <option value="open_library">Open Library</option>
                   <option value="comicvine">ComicVine (Comics)</option>
+                  <option value="vndb">VNDB (Visual Novels)</option>
                 </select>
                 <button className="btn" type="submit" disabled={searching || !query.trim()}>
                   {searching ? '…' : 'Search'}

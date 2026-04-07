@@ -2,7 +2,7 @@ export const STATUSES = ['current', 'planned', 'completed', 'on_hold', 'dropped'
 
 export const MEDIUMS = [
   'Film', 'TV Show', 'Anime', 'Book', 'Manga',
-  'Light Novel', 'Web Novel', 'Comics', 'Game',
+  'Light Novel', 'Web Novel', 'Comics', 'Game', 'Visual Novel',
 ];
 
 export const ORIGINS = ['Japanese', 'Korean', 'Chinese', 'Western', 'Other'];
@@ -80,6 +80,7 @@ const _SOURCE_DOMAINS = {
   'comicvine.gamespot.com': 'comicvine',
   'mangaupdates.com':       'mangaupdates',
   'baka-updates.com':       'mangaupdates',
+  'vndb.org':               'vndb',
 };
 
 /** Infer the source name from a URL, or return '' if unrecognised. */

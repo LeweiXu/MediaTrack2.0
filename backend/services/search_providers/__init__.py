@@ -10,6 +10,7 @@ from .open_library import search_open_library
 from .comicvine import search_comicvine
 from .mangaupdates import search_mangaupdates
 from .novelupdates import search_novelupdates
+from .vndb import search_vndb
 
 __all__ = [
     "search_tmdb",
@@ -24,4 +25,5 @@ __all__ = [
     "search_comicvine",
     "search_mangaupdates",
     "search_novelupdates",
+    "search_vndb",
 ]

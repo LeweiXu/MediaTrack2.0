@@ -19,6 +19,7 @@ Source → Provider mapping:
   google_books  → Google Books
   open_library  → Open Library
   comicvine     → ComicVine (Comics)
+  vndb          → VNDB (Visual Novels)
 
 Keys required (all optional — provider is skipped if absent):
   TMDB_API_KEY
@@ -28,7 +29,7 @@ Keys required (all optional — provider is skipped if absent):
   COMICVINE_API_KEY
 
 No-key providers (always active):
-  AniList, Jikan (MAL proxy), MangaDex, Kitsu, Open Library
+  AniList, Jikan (MAL proxy), MangaDex, Kitsu, Open Library, VNDB
 """
 from __future__ import annotations
 
@@ -52,6 +53,7 @@ from services.search_providers import (
     search_comicvine,
     search_mangaupdates,
     search_novelupdates,
+    search_vndb,
 )
 from services.search_providers.utils import TIMEOUT
 
@@ -63,6 +65,7 @@ logger = logging.getLogger(__name__)
 # Lower index = higher trust for cover quality / metadata completeness.
 _SOURCE_PRIORITY = [
     "novelupdates", # best web novel metadata, highly curated
+    "vndb",         # best visual novel metadata, highly curated
     "jikan",        # MAL data — preferred over AniList for anime & manga
     "tmdb",         # best film/TV metadata
     "igdb",         # best game metadata
@@ -146,6 +149,7 @@ _ALL_PROVIDERS = [
     search_google_books,
     search_open_library,
     search_comicvine,
+    search_vndb,
 ]
 
 _SOURCE_TO_PROVIDER = {
@@ -161,19 +165,21 @@ _SOURCE_TO_PROVIDER = {
     "google_books": search_google_books,
     "open_library": search_open_library,
     "comicvine":    search_comicvine,
+    "vndb":         search_vndb,
 }
 
 # Medium → preferred providers for auto-import narrowing.
 _MEDIUM_PROVIDERS: dict[str, list] = {
-    "Film":        [search_tmdb],
-    "TV Show":     [search_tmdb],
-    "Anime":       [search_jikan, search_anilist, search_kitsu],
-    "Manga":       [search_jikan, search_anilist, search_mangadex, search_mangaupdates],
-    "Light Novel": [search_novelupdates, search_jikan, search_anilist, search_google_books, search_open_library],
-    "Web Novel":   [search_novelupdates, search_google_books, search_open_library],
-    "Book":        [search_google_books, search_open_library],
-    "Game":        [search_igdb, search_rawg],
-    "Comics":      [search_comicvine, search_mangadex],
+    "Film":         [search_tmdb],
+    "TV Show":      [search_tmdb],
+    "Anime":        [search_jikan, search_anilist, search_kitsu],
+    "Manga":        [search_jikan, search_anilist, search_mangadex, search_mangaupdates],
+    "Light Novel":  [search_novelupdates, search_jikan, search_anilist, search_google_books, search_open_library],
+    "Web Novel":    [search_novelupdates, search_google_books, search_open_library],
+    "Book":         [search_google_books, search_open_library],
+    "Game":         [search_igdb, search_rawg],
+    "Comics":       [search_comicvine, search_mangadex],
+    "Visual Novel": [search_vndb],
 }
 
 
