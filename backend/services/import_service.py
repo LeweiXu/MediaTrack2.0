@@ -458,29 +458,32 @@ async def auto_import_rows(csv_content: str, db: Session, username: str):
         medium = typed.get("medium") or ""
 
         # ── Search for metadata ───────────────────────────────────────────────
-        cover_url   = typed.get("cover_url")
-        year        = typed.get("year")
-        origin      = typed.get("origin")
-        external_id = typed.get("external_id")
-        source      = typed.get("source")
-        total_ep    = typed.get("total")
+        # Initialise from CSV; None means the column was absent/empty.
+        cover_url       = typed.get("cover_url")
+        year            = typed.get("year")
+        origin          = typed.get("origin")
+        external_id     = typed.get("external_id")
+        source          = typed.get("source")
+        total_ep        = typed.get("total")
         external_url    = typed.get("external_url")
         genres          = typed.get("genres")
         external_rating = typed.get("external_rating")
 
         try:
-            results = await search_media(title, medium)
+            # Narrow providers by medium when available.
+            results = await search_media(title, medium=medium)
             if results:
                 r = results[0]
-                cover_url       = r.cover_url
-                year            = r.year
-                origin          = r.origin
-                external_id     = r.external_id
-                source          = r.source
-                total_ep        = r.total
-                external_url    = r.external_url
-                genres          = r.genres
-                external_rating = r.external_rating
+                # CSV values take priority: only fill from search if CSV had no value.
+                if cover_url       is None: cover_url       = r.cover_url
+                if year            is None: year            = r.year
+                if origin          is None: origin          = r.origin
+                if external_id     is None: external_id     = r.external_id
+                if source          is None: source          = r.source
+                if total_ep        is None: total_ep        = r.total
+                if external_url    is None: external_url    = r.external_url
+                if genres          is None: genres          = r.genres
+                if external_rating is None: external_rating = r.external_rating
                 if _titles_similar(title, r.title):
                     display = f"'{title}' → '{r.title}'" if r.title != title else f"'{title}'"
                     title = r.title

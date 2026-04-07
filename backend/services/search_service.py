@@ -63,13 +63,13 @@ logger = logging.getLogger(__name__)
 # Lower index = higher trust for cover quality / metadata completeness.
 _SOURCE_PRIORITY = [
     "novelupdates", # best web novel metadata, highly curated
+    "jikan",        # MAL data — preferred over AniList for anime & manga
     "tmdb",         # best film/TV metadata
     "igdb",         # best game metadata
-    "jikan",        # MAL data — preferred over AniList for anime & manga
-    "mangaupdates", # best manga metadata, highly curated
     "anilist",      # good anime/manga, lower priority than Jikan/MangaUpdates
     "kitsu",        # decent fallback for anime/manga
     "mangadex",     # great for manga, cover quality varies
+    "mangaupdates", # best manga metadata, highly curated
     "google_books",
     "open_library",
     "comicvine",
@@ -139,7 +139,7 @@ _ALL_PROVIDERS = [
     search_jikan,
     search_kitsu,
     search_novelupdates,
-    # search_mangaupdates,
+    search_mangaupdates,
     search_mangadex,
     search_igdb,
     search_rawg,
@@ -163,14 +163,31 @@ _SOURCE_TO_PROVIDER = {
     "comicvine":    search_comicvine,
 }
 
+# Medium → preferred providers for auto-import narrowing.
+_MEDIUM_PROVIDERS: dict[str, list] = {
+    "Film":        [search_tmdb],
+    "TV Show":     [search_tmdb],
+    "Anime":       [search_jikan, search_anilist, search_kitsu],
+    "Manga":       [search_jikan, search_anilist, search_mangadex, search_mangaupdates],
+    "Light Novel": [search_novelupdates, search_jikan, search_anilist, search_google_books, search_open_library],
+    "Web Novel":   [search_novelupdates, search_google_books, search_open_library],
+    "Book":        [search_google_books, search_open_library],
+    "Game":        [search_igdb, search_rawg],
+    "Comics":      [search_comicvine, search_mangadex],
+}
 
-async def search_media(title: str, source: str = "") -> list[SearchResult]:
+
+async def search_media(title: str, source: str = "", medium: str = "") -> list[SearchResult]:
     """
-    Fan-out search across all providers (or a single source) in parallel.
+    Fan-out search across all providers (or a single source/medium) in parallel.
     Results are de-duplicated, ranked, and capped at 10.
+
+    Priority: source > medium > all providers.
     """
     if source:
         providers = [_SOURCE_TO_PROVIDER[source]] if source in _SOURCE_TO_PROVIDER else _ALL_PROVIDERS
+    elif medium and medium in _MEDIUM_PROVIDERS:
+        providers = _MEDIUM_PROVIDERS[medium]
     else:
         providers = _ALL_PROVIDERS
 

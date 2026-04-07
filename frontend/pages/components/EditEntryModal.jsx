@@ -1,21 +1,26 @@
 import { useState } from 'react';
-import { updateEntry, deleteEntry } from '../../api.jsx';
+import { updateEntry, deleteEntry, createEntry } from '../../api.jsx';
 import { MEDIUMS, STATUSES, statusLabel, inferSourceFromUrl } from '../../utils.jsx';
 
-export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted }) {
+export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted, onCreate }) {
+  const isCreate = !entry.id;
+
   const [form, setForm] = useState({
-    title:        entry.title        || '',
-    medium:       entry.medium       || '',
-    origin:       entry.origin       || '',
-    status:       entry.status       || 'planned',
-    year:         entry.year         || '',
-    rating:       entry.rating       ?? '',
-    progress:     entry.progress     ?? '',
-    total:        entry.total        ?? '',
-    cover_url:    entry.cover_url    || '',
-    notes:        entry.notes        || '',
-    external_url: entry.external_url || '',
-    source:       entry.source       || '',
+    title:           entry.title           || '',
+    medium:          entry.medium          || '',
+    origin:          entry.origin          || '',
+    status:          entry.status          || 'current',
+    year:            entry.year            || '',
+    rating:          entry.rating          ?? '',
+    progress:        entry.progress        ?? '',
+    total:           entry.total           ?? '',
+    cover_url:       entry.cover_url       || '',
+    notes:           entry.notes           || '',
+    external_url:    entry.external_url    || '',
+    source:          entry.source          || '',
+    external_id:     entry.external_id     || '',
+    genres:          entry.genres          || '',
+    external_rating: entry.external_rating ?? '',
   });
 
   const [saving,         setSaving]         = useState(false);
@@ -35,14 +40,21 @@ export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted })
     try {
       const payload = {
         ...form,
-        year:     form.year     !== '' ? parseInt(form.year)     : undefined,
-        rating:   form.rating   !== '' ? parseFloat(form.rating) : undefined,
-        progress: form.progress !== '' ? parseInt(form.progress) : undefined,
-        total:    form.total    !== '' ? parseInt(form.total)    : undefined,
+        year:            form.year            !== '' ? parseInt(form.year)            : undefined,
+        rating:          form.rating          !== '' ? parseFloat(form.rating)        : undefined,
+        progress:        form.progress        !== '' ? parseInt(form.progress)        : undefined,
+        total:           form.total           !== '' ? parseInt(form.total)           : undefined,
+        external_rating: form.external_rating !== '' ? parseFloat(form.external_rating) : undefined,
       };
-      const updated = await updateEntry(entry.id, payload);
-      onUpdated(updated);
-      onClose();
+      if (isCreate) {
+        const created = await createEntry(payload);
+        onCreate?.(created);
+        onClose();
+      } else {
+        const updated = await updateEntry(entry.id, payload);
+        onUpdated(updated);
+        onClose();
+      }
     } catch (e) {
       setErr(e.message);
     } finally {
@@ -66,7 +78,7 @@ export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted })
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
         <div className="modal-header">
-          <span className="modal-title">Edit — {entry.title}</span>
+          <span className="modal-title">{isCreate ? 'Confirm — ' : 'Edit — '}{entry.title || form.title}</span>
           <button className="icon-btn" onClick={onClose}>✕</button>
         </div>
 
@@ -153,7 +165,7 @@ export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted })
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', marginTop: 4 }}>
               <div>
-                {!confirmDelete
+                {!isCreate && (!confirmDelete
                   ? <button type="button" className="icon-btn danger" onClick={() => setConfirmDelete(true)}>
                       Delete
                     </button>
@@ -166,7 +178,7 @@ export default function EditEntryModal({ entry, onClose, onUpdated, onDeleted })
                       </button>
                       <button type="button" className="icon-btn" onClick={() => setConfirmDelete(false)}>No</button>
                     </span>
-                }
+                )}
               </div>
               <div style={{ display: 'flex', gap: 8 }}>
                 <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>

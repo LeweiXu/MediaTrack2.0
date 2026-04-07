@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { searchMedia, createEntry } from '../../api.jsx';
 import { MEDIUMS, STATUSES, statusLabel, inferSourceFromUrl } from '../../utils.jsx';
+import EditEntryModal from './EditEntryModal.jsx';
 
 export default function AddEntryModal({ onClose, onCreated }) {
-  const [tab,        setTab]        = useState('search');
-  const [query,      setQuery]      = useState('');
-  const [source,     setSource]     = useState('');
-  const [searching,  setSearching]  = useState(false);
-  const [results,    setResults]    = useState(null);
-  const [searchErr,  setSearchErr]  = useState('');
-  const [saving,     setSaving]     = useState(false);
-  const [saveErr,    setSaveErr]    = useState('');
+  const [tab,          setTab]          = useState('search');
+  const [query,        setQuery]        = useState('');
+  const [source,       setSource]       = useState('');
+  const [searching,    setSearching]    = useState(false);
+  const [results,      setResults]      = useState(null);
+  const [searchErr,    setSearchErr]    = useState('');
+  const [saving,       setSaving]       = useState(false);
+  const [saveErr,      setSaveErr]      = useState('');
+  const [selected,     setSelected]     = useState(new Set());
+  const [confirmQueue, setConfirmQueue] = useState([]);
 
   const [form, setForm] = useState({
     title: '', medium: '', origin: '', status: 'current',
@@ -35,7 +38,7 @@ export default function AddEntryModal({ onClose, onCreated }) {
   async function handleSearch(e) {
     e.preventDefault();
     if (!query.trim()) return;
-    setSearching(true); setSearchErr(''); setResults(null);
+    setSearching(true); setSearchErr(''); setResults(null); setSelected(new Set());
     try {
       const data = await searchMedia(query.trim(), source);
       setResults(Array.isArray(data) ? data : data?.results ?? []);
@@ -46,25 +49,52 @@ export default function AddEntryModal({ onClose, onCreated }) {
     }
   }
 
-  function pickResult(item) {
-    setForm({
-      title:       item.title       || '',
-      medium:      item.medium      || '',
-      origin:      item.origin      || '',
-      status:      'current',
-      year:        item.year        || '',
-      rating:      '',
-      progress:    '',
-      total:       item.total       || '',
-      cover_url:   item.cover_url   || item.cover || '',
-      notes:       '',
+  function resultToEntry(item) {
+    return {
+      title:           item.title           || '',
+      medium:          item.medium          || '',
+      origin:          item.origin          || '',
+      status:          'current',
+      year:            item.year            || '',
+      rating:          '',
+      progress:        '',
+      total:           item.total           || '',
+      cover_url:       item.cover_url       || item.cover || '',
+      notes:           '',
       external_id:     item.id              || item.external_id    || '',
       source:          item.source          || '',
       external_url:    item.external_url    || '',
       genres:          item.genres          || '',
       external_rating: item.external_rating ?? '',
-    });
+    };
+  }
+
+  function pickResult(item) {
+    setForm(resultToEntry(item));
     setTab('manual');
+  }
+
+  function toggleSelect(i) {
+    setSelected(prev => {
+      const next = new Set(prev);
+      next.has(i) ? next.delete(i) : next.add(i);
+      return next;
+    });
+  }
+
+  function addSelected() {
+    const queue = [...selected].sort((a, b) => a - b).map(i => resultToEntry(results[i]));
+    setSelected(new Set());
+    setConfirmQueue(queue);
+  }
+
+  function advanceQueue(created) {
+    if (created) onCreated(created);
+    setConfirmQueue(q => {
+      const next = q.slice(1);
+      if (next.length === 0) onClose();
+      return next;
+    });
   }
 
   async function handleSave(e) {
@@ -102,6 +132,18 @@ export default function AddEntryModal({ onClose, onCreated }) {
     textTransform: 'uppercase',
     cursor: 'pointer',
   });
+
+  if (confirmQueue.length > 0) {
+    return (
+      <EditEntryModal
+        entry={confirmQueue[0]}
+        onCreate={created => advanceQueue(created)}
+        onClose={() => advanceQueue(null)}
+        onUpdated={() => {}}
+        onDeleted={() => {}}
+      />
+    );
+  }
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -161,22 +203,49 @@ export default function AddEntryModal({ onClose, onCreated }) {
                   ? <div style={{ color: 'var(--dim)', fontSize: 12, textAlign: 'center', padding: '20px 0' }}>
                       No results — try manual entry.
                     </div>
-                  : <div className="search-results">
-                      {results.map((r, i) => (
-                        <div key={i} className="search-result-item" onClick={() => pickResult(r)}>
-                          <div className="sr-cover">
-                            {(r.cover_url || r.cover) && <img src={r.cover_url || r.cover} alt="" />}
-                          </div>
-                          <div>
-                            <div className="sr-title">{r.title}</div>
-                            <div className="sr-meta">
-                              {[r.medium, r.year, r.origin].filter(Boolean).join(' · ')}
+                  : <>
+                      <div className="search-results">
+                        {results.map((r, i) => (
+                          <div
+                            key={i}
+                            className="search-result-item"
+                            style={{ cursor: 'pointer', background: selected.has(i) ? 'var(--hover)' : undefined }}
+                            onClick={() => toggleSelect(i)}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selected.has(i)}
+                              onChange={() => toggleSelect(i)}
+                              onClick={e => e.stopPropagation()}
+                              style={{ marginRight: 6, flexShrink: 0 }}
+                            />
+                            <div className="sr-cover">
+                              {(r.cover_url || r.cover) && <img src={r.cover_url || r.cover} alt="" />}
                             </div>
+                            <div style={{ flex: 1 }}>
+                              <div className="sr-title">{r.title}</div>
+                              <div className="sr-meta">
+                                {[r.medium, r.year, r.origin].filter(Boolean).join(' · ')}
+                              </div>
+                            </div>
+                            <button
+                              className="icon-btn"
+                              style={{ marginLeft: 'auto', flexShrink: 0 }}
+                              onClick={e => { e.stopPropagation(); pickResult(r); }}
+                            >
+                              Edit
+                            </button>
                           </div>
-                          <button className="icon-btn" style={{ marginLeft: 'auto' }}>Select</button>
+                        ))}
+                      </div>
+                      {selected.size > 0 && (
+                        <div style={{ textAlign: 'right', marginTop: 8 }}>
+                          <button className="btn" onClick={addSelected}>
+                            Add Selected ({selected.size})
+                          </button>
                         </div>
-                      ))}
-                    </div>
+                      )}
+                    </>
               )}
 
               <div style={{ textAlign: 'center', marginTop: 10 }}>

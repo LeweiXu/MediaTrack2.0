@@ -41,6 +41,8 @@
 **TODO**
 - Deleting and/or editing an entry directly on the library page shouldn't reload the whole page (debating on implementation here).
 - Add 'author' field for entry table, possibly split entry table into 2: entry + media to reduce redudancy.
+- Fix import auto-search: if "medium" column exists, use value to filter sources to search, for optional headers, prioritise CSV data over searched data.
+- When adding a new entry, enable selecting multiple entries to add. For each entry, display a EditEntryModal to confirm.
 
 ## 2. Technical Details & Local Development
 

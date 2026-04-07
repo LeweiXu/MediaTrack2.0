@@ -116,11 +116,8 @@ async def search_novelupdates(
                 if hint in genres_lower:
                     origin = orig
                     break
-
-            if origin == "Japanese":
-                med_resolved = "Light Novel"
-            else:
-                med_resolved = "Web Novel"
+                else:
+                    origin = "Other"
 
             year: Optional[int] = None
             if last_updated:
@@ -138,7 +135,7 @@ async def search_novelupdates(
             results.append(
                 SearchResult(
                     title=display_title,
-                    medium=med_resolved,
+                    medium="Web Novel",
                     origin=origin,
                     year=year,
                     cover_url=cover_url,
