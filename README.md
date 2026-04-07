@@ -12,6 +12,11 @@
     - username: demo_user
     - password: password1
 - demo_user is refreshed every 24 hours by copying my personal library into demo_user. All previous changes will be wiped as this is a one-way force replace. Feel free to play aroun with demo_user.
+
+**TODO**
+- Add 'author' field for entry table, possibly split entry table into 2: entry + media to reduce redudancy.
+- Either self cache thumbnails or fetch small thumbnails for media covers for main library thumbnail display.
+- Default sort on Library page should be "Updated" + "Desc".
     
 **Scalability:**
 - Built with FastAPI and PostgreSQL, LOG is easily scalable to thousands (and potentially millions) of users, depending on your hosting resources.
@@ -37,12 +42,6 @@
 - Demonstrate best practices: clean architecture, typed APIs, pure service layers, and modern UI/UX.
 
 ---
-
-**TODO**
-- Deleting and/or editing an entry directly on the library page shouldn't reload the whole page (debating on implementation here).
-- Add 'author' field for entry table, possibly split entry table into 2: entry + media to reduce redudancy.
-- Fix import auto-search: if "medium" column exists, use value to filter sources to search, for optional headers, prioritise CSV data over searched data.
-- When adding a new entry, enable selecting multiple entries to add. For each entry, display a EditEntryModal to confirm.
 
 ## 2. Technical Details & Local Development
 
