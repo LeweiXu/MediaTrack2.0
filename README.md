@@ -13,6 +13,12 @@
     - password: password1
 - demo_user is refreshed every 24 hours by copying my personal library into demo_user. All previous changes will be wiped as this is a one-way force replace. Feel free to play aroun with demo_user.
 
+<img src="./public/Dashboard.png" width="800">
+<img src="./public/Library.png" width="800">
+<img src="./public/Statistics.png" width="800">
+
+---
+
 **TODO**
 - Add 'author' field for entry table, possibly split entry table into 2: entry + media to reduce redudancy.
 - Either self cache thumbnails or fetch small thumbnails for media covers for main library thumbnail display.
