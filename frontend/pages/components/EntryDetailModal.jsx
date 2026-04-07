@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { updateEntry, deleteEntry } from '../../api.jsx';
 import { MEDIUMS, STATUSES, statusLabel, fmtDate, progressLabel, inferSourceFromUrl } from '../../utils.jsx';
 
+function cleanUrl(url) {
+  try {
+    const u = new URL(url);
+    return u.origin + u.pathname.replace(/\/$/, '');
+  } catch {
+    return url;
+  }
+}
+
 function toDateInput(iso) {
   if (!iso) return '';
   return new Date(iso).toISOString().slice(0, 10);
@@ -177,21 +186,22 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
                 </div>
               </div>
 
+              {current.external_url && (
+                <div style={{ marginBottom: 10 }}>
+                  <div className="form-label">External Source</div>
+                  <a href={current.external_url} target="_blank" rel="noopener noreferrer"
+                    style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: 12, wordBreak: 'break-all' }}
+                    onMouseOver={e => e.target.style.textDecoration = 'underline'}
+                    onMouseOut={e => e.target.style.textDecoration = 'none'}>
+                    {cleanUrl(current.external_url)}
+                  </a>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: 16, fontSize: 11, color: 'var(--dim)', marginBottom: 8 }}>
                 <span>Added: {fmtDate(current.created_at)}</span>
                 <span>Updated: {fmtDate(current.updated_at)}</span>
               </div>
-
-              {current.external_url && (
-                <div style={{ marginBottom: 14, fontSize: 11 }}>
-                  <a href={current.external_url} target="_blank" rel="noopener noreferrer"
-                    style={{ color: 'var(--accent)', textDecoration: 'none' }}
-                    onMouseOver={e => e.target.style.textDecoration = 'underline'}
-                    onMouseOut={e => e.target.style.textDecoration = 'none'}>
-                    External Source ↗
-                  </a>
-                </div>
-              )}
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                 <button type="button" className="btn btn-outline" onClick={onClose}>Close</button>

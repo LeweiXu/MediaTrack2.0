@@ -16,15 +16,16 @@ function CoverThumb({ url, title }) {
 }
 
 export default function DashboardAlt({ onFilterChange }) {
-  const [stats,       setStats]       = useState(null);
-  const [current,     setCurrent]     = useState([]);
-  const [planned,     setPlanned]     = useState([]);
-  const [recent,      setRecent]      = useState([]);
-  const [activity,    setActivity]    = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState('');
-  const [showAdd,     setShowAdd]     = useState(false);
-  const [detailEntry, setDetailEntry] = useState(null);
+  const [stats,           setStats]           = useState(null);
+  const [current,         setCurrent]         = useState([]);
+  const [planned,         setPlanned]         = useState([]);
+  const [recent,          setRecent]          = useState([]);
+  const [activity,        setActivity]        = useState([]);
+  const [loading,         setLoading]         = useState(true);
+  const [error,           setError]           = useState('');
+  const [showAdd,         setShowAdd]         = useState(false);
+  const [detailEntry,     setDetailEntry]     = useState(null);
+  const [editingProgress, setEditingProgress] = useState(null); // { id, value }
 
   const load = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(''); }
@@ -85,6 +86,20 @@ export default function DashboardAlt({ onFilterChange }) {
       load(true);
     } catch (e) {
       alert('Failed to update: ' + e.message);
+    }
+  }
+
+  async function handleProgressSave(id, value) {
+    setEditingProgress(null);
+    const num = parseInt(value, 10);
+    if (!isNaN(num)) {
+      try {
+        const updated = await updateEntry(id, { progress: num });
+        setCurrent(c => c.map(e => e.id === id ? { ...e, ...updated } : e));
+        load(true);
+      } catch (e) {
+        alert('Update failed: ' + e.message);
+      }
     }
   }
 
@@ -187,6 +202,7 @@ export default function DashboardAlt({ onFilterChange }) {
                 {current.length === 0
                 ? <div style={{ color: 'var(--dim)', fontSize: 12, marginBottom: 24 }}>No active entries.</div>
                 : (
+                    <>
                     <table className="media-table">
                     <thead>
                         <tr>
@@ -194,8 +210,9 @@ export default function DashboardAlt({ onFilterChange }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {current.map(e => {
+                        {current.slice(0, 10).map(e => {
                         const pct = progressPercent(e);
+                        const isEditingProg = editingProgress?.id === e.id;
                         return (
                             <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
                             <td>
@@ -205,15 +222,34 @@ export default function DashboardAlt({ onFilterChange }) {
                                 </div>
                             </td>
                             <td><span style={{ color: 'var(--dim)' }}>{e.medium ?? '—'}</span></td>
-                            <td>
-                                <div className="progress-cell">
-                                {progressLabel(e)}
-                                {pct > 0 && (
+                            <td onClick={ev => ev.stopPropagation()}>
+                                {isEditingProg ? (
+                                <input
+                                    className="inline-select"
+                                    type="number" min="0"
+                                    style={{ width: 64 }}
+                                    value={editingProgress.value}
+                                    autoFocus
+                                    onChange={ev => setEditingProgress({ id: e.id, value: ev.target.value })}
+                                    onKeyDown={ev => {
+                                    if (ev.key === 'Enter') handleProgressSave(e.id, editingProgress.value);
+                                    if (ev.key === 'Escape') setEditingProgress(null);
+                                    }}
+                                    onBlur={() => handleProgressSave(e.id, editingProgress.value)}
+                                />
+                                ) : (
+                                <div className="progress-cell"
+                                    title="Click to edit progress"
+                                    style={{ cursor: 'text' }}
+                                    onClick={() => setEditingProgress({ id: e.id, value: String(e.progress ?? '') })}>
+                                    {progressLabel(e)}
+                                    {pct > 0 && (
                                     <div className="progress-mini">
-                                    <div className="progress-mini-fill" style={{ width: `${pct}%` }} />
+                                        <div className="progress-mini-fill" style={{ width: `${pct}%` }} />
                                     </div>
-                                )}
+                                    )}
                                 </div>
+                                )}
                             </td>
                             <td onClick={ev => ev.stopPropagation()}>
                                 <select className="inline-select" value={e.status}
@@ -226,6 +262,13 @@ export default function DashboardAlt({ onFilterChange }) {
                         })}
                     </tbody>
                     </table>
+                    {current.length > 10 && (
+                        <button className="icon-btn" style={{ marginTop: 6, fontSize: 11 }}
+                        onClick={() => onFilterChange({ status: 'current' })}>
+                        Show all ({current.length}+)
+                        </button>
+                    )}
+                    </>
                 )
                 }
             </div>
@@ -236,14 +279,17 @@ export default function DashboardAlt({ onFilterChange }) {
                 {planned.length === 0
                 ? <div style={{ color: 'var(--dim)', fontSize: 12, marginBottom: 24 }}>No planned entries.</div>
                 : (
+                    <>
                     <table className="media-table">
                     <thead>
                         <tr>
-                        <th>Title</th><th>Type</th><th>Status</th>
+                        <th>Title</th><th>Type</th><th>Progress</th><th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {planned.map(e => (
+                        {planned.slice(0, 10).map(e => {
+                        const pct = progressPercent(e);
+                        return (
                         <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
                             <td>
                             <div className="cover-cell">
@@ -252,6 +298,16 @@ export default function DashboardAlt({ onFilterChange }) {
                             </div>
                             </td>
                             <td><span style={{ color: 'var(--dim)' }}>{e.medium ?? '—'}</span></td>
+                            <td>
+                            <div className="progress-cell">
+                                {progressLabel(e)}
+                                {pct > 0 && (
+                                <div className="progress-mini">
+                                    <div className="progress-mini-fill" style={{ width: `${pct}%` }} />
+                                </div>
+                                )}
+                            </div>
+                            </td>
                             <td onClick={ev => ev.stopPropagation()}>
                             <select className="inline-select" value={e.status}
                                 onChange={ev => handleStatusChange(e.id, ev.target.value)}>
@@ -259,9 +315,17 @@ export default function DashboardAlt({ onFilterChange }) {
                             </select>
                             </td>
                         </tr>
-                        ))}
+                        );
+                        })}
                     </tbody>
                     </table>
+                    {planned.length > 10 && (
+                        <button className="icon-btn" style={{ marginTop: 6, fontSize: 11 }}
+                        onClick={() => onFilterChange({ status: 'planned' })}>
+                        Show all ({planned.length}+)
+                        </button>
+                    )}
+                    </>
                 )
                 }
             </div>
@@ -275,12 +339,14 @@ export default function DashboardAlt({ onFilterChange }) {
                 <table className="media-table">
                 <thead>
                     <tr>
-                    <th>Title</th><th>Type</th><th>Completed</th>
+                    <th>Title</th><th>Type</th><th>Progress</th><th>Completed</th>
                     <th>Status</th><th>Rating</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {recent.map(e => (
+                    {recent.map(e => {
+                    const pct = progressPercent(e);
+                    return (
                     <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
                         <td>
                         <div className="cover-cell">
@@ -289,6 +355,16 @@ export default function DashboardAlt({ onFilterChange }) {
                         </div>
                         </td>
                         <td><span style={{ color: 'var(--dim)' }}>{[e.medium, e.origin].filter(Boolean).join(' / ')}</span></td>
+                        <td>
+                        <div className="progress-cell">
+                            {progressLabel(e)}
+                            {pct > 0 && (
+                            <div className="progress-mini">
+                                <div className="progress-mini-fill" style={{ width: `${pct}%` }} />
+                            </div>
+                            )}
+                        </div>
+                        </td>
                         <td><span style={{ color: 'var(--dim)' }}>{fmtDate(e.completed_at || e.updated_at)}</span></td>
                         <td><span className={badgeClass(e.status)}>{statusLabel(e.status)}</span></td>
                         <td>
@@ -297,7 +373,8 @@ export default function DashboardAlt({ onFilterChange }) {
                         </span>
                         </td>
                     </tr>
-                    ))}
+                    );
+                    })}
                 </tbody>
                 </table>
             )

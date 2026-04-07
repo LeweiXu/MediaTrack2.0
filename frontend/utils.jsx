@@ -59,9 +59,9 @@ export function progressLabel(entry) {
   const { progress, total, medium } = entry;
   if (!progress && !total) return '—';
   const m = medium?.toLowerCase() ?? '';
-  const unit = m === 'book' ? 'p.'
-             : m === 'light novel' ? 'vol.'
-             : (m === 'manga' || m === 'web novel' || m === 'comics') ? 'ch.'
+  const unit = (m === 'book' || m === 'light novel') ? 'vol.'
+             : (m === 'manga' || m === 'web novel' || m === 'comics' || m === 'visual novel') ? 'ch.'
+             : m === 'game' ? 'hr.'
              : 'ep.';
   if (total) return `${progress ?? '?'} / ${total} ${unit}`;
   return `${progress} ${unit}`;
