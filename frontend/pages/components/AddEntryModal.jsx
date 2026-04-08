@@ -1,47 +1,69 @@
 import { useState } from 'react';
-import { searchMedia, createEntry, checkDuplicates } from '../../api.jsx';
-import { MEDIUMS, STATUSES, statusLabel, inferSourceFromUrl } from '../../utils.jsx';
+import { searchMedia, checkDuplicates } from '../../api.jsx';
+import EntryFormModal from './EntryFormModal.jsx';
 import ConfirmEntryModal from './ConfirmEntryModal.jsx';
 
-export default function AddEntryModal({ onClose, onCreated }) {
-  const [tab,          setTab]          = useState('search');
-  const [query,        setQuery]        = useState('');
-  const [source,       setSource]       = useState('');
-  const [searching,    setSearching]    = useState(false);
-  const [results,      setResults]      = useState(null);
-  const [inLibrary,    setInLibrary]    = useState([]);
-  const [searchErr,    setSearchErr]    = useState('');
-  const [saving,       setSaving]       = useState(false);
-  const [saveErr,      setSaveErr]      = useState('');
-  const [selected,     setSelected]     = useState(new Set());
-  const [confirmQueue, setConfirmQueue] = useState([]);
+const SEARCH_SOURCES = [
+  { value: 'tmdb',         label: 'TMDB' },
+  { value: 'anilist',      label: 'AniList' },
+  { value: 'jikan',        label: 'MyAnimeList' },
+  { value: 'kitsu',        label: 'Kitsu' },
+  { value: 'novelupdates', label: 'NovelUpdates' },
+  { value: 'mangadex',     label: 'MangaDex' },
+  { value: 'igdb',         label: 'IGDB' },
+  { value: 'rawg',         label: 'RAWG' },
+  { value: 'google_books', label: 'Google Books' },
+  { value: 'open_library', label: 'Open Library' },
+  { value: 'comicvine',    label: 'ComicVine' },
+  { value: 'vndb',         label: 'VNDB' },
+];
 
-  const [form, setForm] = useState({
-    title: '', medium: '', origin: '', status: 'current',
-    year: '', rating: '', progress: '', total: '', cover_url: '', notes: '',
-    completed_at: '', external_url: '', genres: '', external_rating: '',
-  });
+const SOURCE_LABEL = Object.fromEntries(SEARCH_SOURCES.map(s => [s.value, s.label]));
 
-  const today = () => new Date().toISOString().slice(0, 10);
+const LS_SOURCES_KEY = 'search_sources';
 
-  const setField = (k, v) => setForm(f => {
-    const next = { ...f, [k]: v };
-    if (k === 'status' && v === 'completed') {
-      if (!next.completed_at) next.completed_at = today();
-      if (next.total !== '') next.progress = next.total;
+function loadSavedSources() {
+  try {
+    const raw = localStorage.getItem(LS_SOURCES_KEY);
+    if (raw) {
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr)) return new Set(arr);
     }
-    if (k === 'status' && v !== 'completed') next.completed_at = '';
-    if (k === 'total' && f.status === 'completed' && v !== '') next.progress = v;
-    if (k === 'external_url') next.source = inferSourceFromUrl(v);
-    return next;
-  });
+  } catch (_) { /* ignore */ }
+  return new Set();
+}
+
+function saveSources(set) {
+  localStorage.setItem(LS_SOURCES_KEY, JSON.stringify([...set]));
+}
+
+export default function AddEntryModal({ onClose, onCreated }) {
+  const [tab,             setTab]             = useState('search');
+  const [query,           setQuery]           = useState('');
+  const [selectedSources, setSelectedSources] = useState(() => loadSavedSources());
+  const [extended,        setExtended]        = useState(false);
+  const [searching,       setSearching]       = useState(false);
+  const [results,         setResults]         = useState(null);
+  const [inLibrary,       setInLibrary]       = useState([]);
+  const [searchErr,       setSearchErr]       = useState('');
+  const [selected,        setSelected]        = useState(new Set());
+  const [confirmQueue,    setConfirmQueue]     = useState([]);
+
+  function toggleSource(value) {
+    setSelectedSources(prev => {
+      const next = new Set(prev);
+      next.has(value) ? next.delete(value) : next.add(value);
+      saveSources(next);
+      return next;
+    });
+  }
 
   async function handleSearch(e) {
     e.preventDefault();
     if (!query.trim()) return;
     setSearching(true); setSearchErr(''); setResults(null); setInLibrary([]); setSelected(new Set());
     try {
-      const data = await searchMedia(query.trim(), source);
+      const data = await searchMedia(query.trim(), [...selectedSources], extended);
       const list = Array.isArray(data) ? data : data?.results ?? [];
       setResults(list);
       if (list.length > 0) {
@@ -102,30 +124,6 @@ export default function AddEntryModal({ onClose, onCreated }) {
     onClose();
   }
 
-  async function handleSave(e) {
-    e.preventDefault();
-    if (!form.title.trim()) { setSaveErr('Title is required'); return; }
-    setSaving(true); setSaveErr('');
-    try {
-      const payload = {
-        ...form,
-        year:         form.year         !== '' ? parseInt(form.year)       : undefined,
-        rating:       form.rating       !== '' ? parseFloat(form.rating)   : undefined,
-        progress:        form.progress        !== '' ? parseInt(form.progress)          : undefined,
-        total:           form.total           !== '' ? parseInt(form.total)             : undefined,
-        completed_at:    form.completed_at    ? form.completed_at + 'T00:00:00Z'        : undefined,
-        external_rating: form.external_rating !== '' ? parseFloat(form.external_rating) : undefined,
-      };
-      const created = await createEntry(payload);
-      onCreated(created);
-      onClose();
-    } catch (err) {
-      setSaveErr(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
   const tabStyle = (t) => ({
     background: 'none',
     border: 'none',
@@ -148,6 +146,16 @@ export default function AddEntryModal({ onClose, onCreated }) {
     );
   }
 
+  if (tab === 'manual') {
+    return (
+      <EntryFormModal
+        entry={null}
+        onClose={() => setTab('search')}
+        onSaved={(created) => { onCreated(created); onClose(); }}
+      />
+    );
+  }
+
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -165,38 +173,70 @@ export default function AddEntryModal({ onClose, onCreated }) {
           {/* ── Auto-search tab ── */}
           {tab === 'search' && (
             <>
-              <form onSubmit={handleSearch} style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-                <input
-                  className="form-input"
-                  style={{ flex: 1 }}
-                  placeholder="Title…"
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  autoFocus
-                />
-                <select
-                  className="form-input"
-                  style={{ width: 150 }}
-                  value={source}
-                  onChange={e => setSource(e.target.value)}
-                >
-                  <option value="">Any source</option>
-                  <option value="tmdb">TMDB (Film &amp; TV)</option>
-                  <option value="anilist">AniList (Anime &amp; Manga)</option>
-                  <option value="jikan">MyAnimeList (Anime &amp; Manga)</option>
-                  <option value="kitsu">Kitsu (Anime &amp; Manga)</option>
-                  <option value="novelupdates">NovelUpdates (Novels)</option>
-                  <option value="mangadex">MangaDex (Manga)</option>
-                  <option value="igdb">IGDB (Games)</option>
-                  <option value="rawg">RAWG (Games)</option>
-                  <option value="google_books">Google Books</option>
-                  <option value="open_library">Open Library</option>
-                  <option value="comicvine">ComicVine (Comics)</option>
-                  <option value="vndb">VNDB (Visual Novels)</option>
-                </select>
-                <button className="btn" type="submit" disabled={searching || !query.trim()}>
-                  {searching ? '…' : 'Search'}
-                </button>
+              <form onSubmit={handleSearch} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <input
+                    className="form-input"
+                    style={{ flex: 1 }}
+                    placeholder="Title…"
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    autoFocus
+                  />
+                  <button className="btn" type="submit" disabled={searching || !query.trim()}>
+                    {searching ? '…' : 'Search'}
+                  </button>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    onClick={() => setExtended(x => !x)}
+                    style={{
+                      borderColor: extended ? 'var(--accent)' : undefined,
+                      color: extended ? 'var(--accent)' : undefined,
+                      padding: '5px 10px',
+                    }}
+                    title="Return all results instead of top 10"
+                  >
+                    Extended
+                  </button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                  <span style={{ fontSize: 10, color: 'var(--dim)', marginRight: 2, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    Sources:
+                  </span>
+                  {SEARCH_SOURCES.map(s => {
+                    const on = selectedSources.has(s.value);
+                    return (
+                      <button
+                        key={s.value}
+                        type="button"
+                        onClick={() => toggleSource(s.value)}
+                        style={{
+                          fontSize: 10,
+                          padding: '2px 7px',
+                          borderRadius: 3,
+                          border: '1px solid',
+                          borderColor: on ? 'var(--accent)' : 'var(--border)',
+                          background: on ? 'var(--accent)' : 'transparent',
+                          color: on ? 'var(--bg)' : 'var(--dim)',
+                          cursor: 'pointer',
+                          letterSpacing: '0.03em',
+                        }}
+                      >
+                        {s.label}
+                      </button>
+                    );
+                  })}
+                  {selectedSources.size > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setSelectedSources(new Set()); saveSources(new Set()); }}
+                      style={{ fontSize: 10, padding: '2px 6px', background: 'none', border: 'none', color: 'var(--dim)', cursor: 'pointer' }}
+                    >
+                      ✕ all
+                    </button>
+                  )}
+                </div>
               </form>
 
               {searchErr && (
@@ -233,6 +273,11 @@ export default function AddEntryModal({ onClose, onCreated }) {
                                 <div className="sr-meta">
                                   {[r.medium, r.year, r.origin].filter(Boolean).join(' · ')}
                                 </div>
+                                {r.source && (
+                                  <div style={{ fontSize: 10, color: 'var(--accent)', opacity: 0.7, marginTop: 1 }}>
+                                    {SOURCE_LABEL[r.source] ?? r.source}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           );
@@ -256,112 +301,9 @@ export default function AddEntryModal({ onClose, onCreated }) {
                     </>
               )}
 
-              <div style={{ textAlign: 'center', marginTop: 10 }}>
-                <button className="icon-btn" onClick={() => setTab('manual')}>
-                  Skip to manual entry →
-                </button>
-              </div>
             </>
           )}
 
-          {/* ── Manual entry tab ── */}
-          {tab === 'manual' && (
-            <form onSubmit={handleSave}>
-              <div className="form-row">
-                <label className="form-label">Title *</label>
-                <input className="form-input" value={form.title} placeholder="Title"
-                  onChange={e => setField('title', e.target.value)} />
-              </div>
-
-              <div className="form-row-2" style={{ marginBottom: 14 }}>
-                <div>
-                  <label className="form-label">Medium</label>
-                  <select className="form-input" value={form.medium} onChange={e => setField('medium', e.target.value)}>
-                    <option value="">—</option>
-                    {MEDIUMS.map(m => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="form-label">Status</label>
-                  <select className="form-input" value={form.status} onChange={e => setField('status', e.target.value)}>
-                    {STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              {form.status === 'completed' && (
-                <div className="form-row" style={{ marginBottom: 14 }}>
-                  <label className="form-label">Completed Date</label>
-                  <input className="form-input" type="date" value={form.completed_at}
-                    onChange={e => setField('completed_at', e.target.value)} />
-                </div>
-              )}
-
-              <div className="form-row-2" style={{ marginBottom: 14 }}>
-                <div>
-                  <label className="form-label">Origin</label>
-                  <input className="form-input" value={form.origin} placeholder="Japanese, Korean…"
-                    onChange={e => setField('origin', e.target.value)} />
-                </div>
-                <div>
-                  <label className="form-label">Year</label>
-                  <input className="form-input" type="number" value={form.year} placeholder="2024"
-                    onChange={e => setField('year', e.target.value)} />
-                </div>
-              </div>
-
-              <div className="form-row-2" style={{ marginBottom: 14 }}>
-                <div>
-                  <label className="form-label">Progress</label>
-                  <input className="form-input" type="number" value={form.progress} placeholder="0"
-                    onChange={e => setField('progress', e.target.value)} />
-                </div>
-                <div>
-                  <label className="form-label">Total</label>
-                  <input className="form-input" type="number" value={form.total} placeholder="12"
-                    onChange={e => setField('total', e.target.value)} />
-                </div>
-              </div>
-
-              <div className="form-row">
-                <label className="form-label">Rating (0–10)</label>
-                <input className="form-input" type="number" min="0" max="10" step="0.1"
-                  value={form.rating} placeholder="—" onChange={e => setField('rating', e.target.value)} />
-              </div>
-
-              <div className="form-row">
-                <label className="form-label">Cover URL</label>
-                <input className="form-input" value={form.cover_url} placeholder="https://…"
-                  onChange={e => setField('cover_url', e.target.value)} />
-              </div>
-
-              <div className="form-row">
-                <label className="form-label">Source URL</label>
-                <input className="form-input" value={form.external_url} placeholder="https://novelupdates.com/series/…"
-                  onChange={e => setField('external_url', e.target.value)} />
-                {form.source && (
-                  <span style={{ fontSize: 11, color: 'var(--accent)', marginTop: 3 }}>
-                    Source: {form.source}
-                  </span>
-                )}
-              </div>
-
-              <div className="form-row">
-                <label className="form-label">Notes</label>
-                <textarea className="form-input" rows={2} value={form.notes} placeholder="Optional notes…"
-                  onChange={e => setField('notes', e.target.value)} style={{ resize: 'vertical' }} />
-              </div>
-
-              {saveErr && <div style={{ color: 'var(--red)', fontSize: 11, marginBottom: 8 }}>{saveErr}</div>}
-
-              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
-                <button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button>
-                <button type="submit" className="btn" disabled={saving}>
-                  {saving ? 'Saving…' : 'Save Entry'}
-                </button>
-              </div>
-            </form>
-          )}
         </div>
       </div>
     </div>

@@ -163,10 +163,38 @@ export async function startAutoImport(file, onEvent) {
 export const checkDuplicates = (items) =>
   req('/entries/check-duplicates', { method: 'POST', body: JSON.stringify({ items }) });
 
-export const searchMedia = (title, source = '') => {
-  const qs = new URLSearchParams({ title, ...(source && { source }) }).toString();
-  return req(`/search?${qs}`);
-};
+// Mirrors backend _SOURCE_PRIORITY — lower index = higher trust.
+const _SOURCE_PRIORITY = [
+  'novelupdates', 'vndb', 'jikan', 'tmdb', 'igdb',
+  'anilist', 'kitsu', 'mangadex', 'mangaupdates',
+  'google_books', 'open_library', 'comicvine', 'rawg',
+];
+const _sourceRank = s => { const i = _SOURCE_PRIORITY.indexOf(s); return i === -1 ? _SOURCE_PRIORITY.length : i; };
+
+export async function searchMedia(title, sources = [], extended = false) {
+  const list = Array.isArray(sources) ? sources.filter(Boolean) : (sources ? [sources] : []);
+  if (list.length === 0) {
+    // Backend already deduplicates, ranks, and caps at 10
+    return req(`/search?${new URLSearchParams({ title })}`);
+  }
+  if (list.length === 1) {
+    return req(`/search?${new URLSearchParams({ title, source: list[0] })}`);
+  }
+  // Multiple sources: fan out in parallel then deduplicate + rank client-side
+  const groups = await Promise.all(
+    list.map(source => req(`/search?${new URLSearchParams({ title, source })}`).catch(() => []))
+  );
+  const combined = groups.flat();
+  const seen = new Set();
+  const deduped = combined.filter(r => {
+    const key = `${r.title?.toLowerCase()?.trim()}|${r.medium}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  deduped.sort((a, b) => _sourceRank(a.source) - _sourceRank(b.source));
+  return extended ? deduped : deduped.slice(0, 10);
+}
 
 export const getStats = () => req('/stats');
 

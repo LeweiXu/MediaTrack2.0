@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createEntry } from '../../api.jsx';
-import { MEDIUMS, STATUSES, statusLabel, inferSourceFromUrl } from '../../utils.jsx';
+import { MEDIUMS, ORIGINS, STATUSES, statusLabel, inferSourceFromUrl } from '../../utils.jsx';
 
 function entryToForm(e) {
   return {
@@ -148,8 +148,10 @@ export default function ConfirmEntryModal({ queue, onSave, onComplete }) {
             <div className="form-row-2" style={{ marginBottom: 14 }}>
               <div>
                 <label className="form-label">Origin</label>
-                <input className="form-input" value={form.origin}
-                  onChange={e => setField('origin', e.target.value)} />
+                <select className="form-input" value={form.origin} onChange={e => setField('origin', e.target.value)}>
+                  <option value="">—</option>
+                  {ORIGINS.map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
               </div>
               <div>
                 <label className="form-label">Year</label>
@@ -192,6 +194,15 @@ export default function ConfirmEntryModal({ queue, onSave, onComplete }) {
                   Source: {form.source}
                 </span>
               )}
+            </div>
+
+            <div className="form-row">
+              <label className="form-label">Genres</label>
+              <input className="form-input" value={form.genres}
+                placeholder="e.g. Action, Comedy, Drama"
+                onChange={e => setField('genres', e.target.value)}
+                onBlur={e => setField('genres', e.target.value.split(',').map(s => s.trim()).filter(Boolean).join(', '))}
+              />
             </div>
 
             <div className="form-row">

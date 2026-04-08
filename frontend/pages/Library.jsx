@@ -29,13 +29,14 @@ export default function Library({ initialFilters = {} }) {
   const [startEditing,   setStartEditing]   = useState(false);
   const [confirmDeleteId,setConfirmDeleteId] = useState(null);
   const [editingProgress,setEditingProgress] = useState(null); // { id, value }
+  const [editingRating,  setEditingRating]   = useState(null); // { id, value }
 
   const [search,       setSearch]       = useState(initialFilters.title  || '');
   const [statusFilter, setStatusFilter] = useState(initialFilters.status || '');
   const [mediumFilter, setMediumFilter] = useState(initialFilters.medium || '');
   const [originFilter, setOriginFilter] = useState(initialFilters.origin || '');
-  const [sort,         setSort]         = useState('title');
-  const [order,        setOrder]        = useState('asc');
+  const [sort,         setSort]         = useState('updated_at');
+  const [order,        setOrder]        = useState('desc');
   const [page,         setPage]         = useState(1);
 
   const load = useCallback(async (silent = false) => {
@@ -108,6 +109,19 @@ export default function Library({ initialFilters = {} }) {
       } catch (e) {
         alert('Update failed: ' + e.message);
       }
+    }
+  }
+
+  async function handleRatingSave(id, value) {
+    setEditingRating(null);
+    const num = value !== '' ? parseFloat(value) : null;
+    if (num !== null && (isNaN(num) || num < 0 || num > 10)) return;
+    try {
+      const updated = await updateEntry(id, { rating: num ?? undefined });
+      setEntries(prev => prev.map(e => e.id === id ? { ...e, ...updated } : e));
+      load(true);
+    } catch (e) {
+      alert('Update failed: ' + e.message);
     }
   }
 
@@ -325,10 +339,28 @@ export default function Library({ initialFilters = {} }) {
                           {STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
                         </select>
                       </td>
-                      <td>
-                        <span className="rating-cell">
-                          {e.rating != null ? e.rating : '—'}<span>/10</span>
-                        </span>
+                      <td onClick={ev => ev.stopPropagation()}>
+                        {editingRating?.id === e.id ? (
+                          <input
+                            className="inline-select"
+                            type="number" min="0" max="10" step="0.1"
+                            style={{ width: 64 }}
+                            value={editingRating.value}
+                            autoFocus
+                            onChange={ev => setEditingRating({ id: e.id, value: ev.target.value })}
+                            onKeyDown={ev => {
+                              if (ev.key === 'Enter') handleRatingSave(e.id, editingRating.value);
+                              if (ev.key === 'Escape') setEditingRating(null);
+                            }}
+                            onBlur={() => handleRatingSave(e.id, editingRating.value)}
+                          />
+                        ) : (
+                          <span className="rating-cell" title="Click to edit rating"
+                            style={{ cursor: 'text' }}
+                            onClick={() => setEditingRating({ id: e.id, value: String(e.rating ?? '') })}>
+                            {e.rating != null ? e.rating : '—'}<span>/10</span>
+                          </span>
+                        )}
                       </td>
                       <td><span style={{ color: 'var(--dim)' }}>{fmtDate(e.updated_at)}</span></td>
                       <td><span style={{ color: 'var(--dim)' }}>{fmtDate(e.completed_at)}</span></td>

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import func, select, asc, desc, and_
+from sqlalchemy import func, select, asc, desc, and_, nullslast
 from sqlalchemy.orm import Session
 
 from models import Entry
@@ -61,9 +61,10 @@ def get_entries(
     count_q = select(func.count()).select_from(base_q.subquery())
     total = db.execute(count_q).scalar_one()
 
-    # Paginated results
+    # Paginated results — always put NULLs last so unrated/undated entries
+    # don't float to the top when sorting descending.
     rows = db.execute(
-        base_q.order_by(direction(sort_col)).limit(limit).offset(offset)
+        base_q.order_by(nullslast(direction(sort_col))).limit(limit).offset(offset)
     ).scalars().all()
 
     return EntryListResponse(

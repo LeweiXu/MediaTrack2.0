@@ -26,6 +26,7 @@ export default function DashboardAlt({ onFilterChange }) {
   const [showAdd,         setShowAdd]         = useState(false);
   const [detailEntry,     setDetailEntry]     = useState(null);
   const [editingProgress, setEditingProgress] = useState(null); // { id, value }
+  const [editingRating,   setEditingRating]   = useState(null); // { id, value }
 
   const load = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(''); }
@@ -89,17 +90,36 @@ export default function DashboardAlt({ onFilterChange }) {
     }
   }
 
+  function refreshEntry(updated) {
+    setCurrent(c => c.map(e => e.id === updated.id ? { ...e, ...updated } : e));
+    setPlanned(p => p.map(e => e.id === updated.id ? { ...e, ...updated } : e));
+    setRecent(r  => r.map(e => e.id === updated.id ? { ...e, ...updated } : e));
+  }
+
   async function handleProgressSave(id, value) {
     setEditingProgress(null);
     const num = parseInt(value, 10);
     if (!isNaN(num)) {
       try {
         const updated = await updateEntry(id, { progress: num });
-        setCurrent(c => c.map(e => e.id === id ? { ...e, ...updated } : e));
+        refreshEntry(updated);
         load(true);
       } catch (e) {
         alert('Update failed: ' + e.message);
       }
+    }
+  }
+
+  async function handleRatingSave(id, value) {
+    setEditingRating(null);
+    const num = value !== '' ? parseFloat(value) : null;
+    if (num !== null && (isNaN(num) || num < 0 || num > 10)) return;
+    try {
+      const updated = await updateEntry(id, { rating: num ?? undefined });
+      refreshEntry(updated);
+      load(true);
+    } catch (e) {
+      alert('Update failed: ' + e.message);
     }
   }
 
@@ -206,13 +226,14 @@ export default function DashboardAlt({ onFilterChange }) {
                     <table className="media-table">
                     <thead>
                         <tr>
-                        <th>Title</th><th>Type</th><th>Progress</th><th>Status</th>
+                        <th>Title</th><th>Type</th><th>Progress</th><th>Status</th><th>Rating</th>
                         </tr>
                     </thead>
                     <tbody>
                         {current.slice(0, 10).map(e => {
                         const pct = progressPercent(e);
-                        const isEditingProg = editingProgress?.id === e.id;
+                        const isEditingProg   = editingProgress?.id === e.id;
+                        const isEditingRating = editingRating?.id === e.id;
                         return (
                             <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
                             <td>
@@ -257,6 +278,29 @@ export default function DashboardAlt({ onFilterChange }) {
                                 {STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
                                 </select>
                             </td>
+                            <td onClick={ev => ev.stopPropagation()}>
+                                {isEditingRating ? (
+                                <input
+                                    className="inline-select"
+                                    type="number" min="0" max="10" step="0.1"
+                                    style={{ width: 64 }}
+                                    value={editingRating.value}
+                                    autoFocus
+                                    onChange={ev => setEditingRating({ id: e.id, value: ev.target.value })}
+                                    onKeyDown={ev => {
+                                    if (ev.key === 'Enter') handleRatingSave(e.id, editingRating.value);
+                                    if (ev.key === 'Escape') setEditingRating(null);
+                                    }}
+                                    onBlur={() => handleRatingSave(e.id, editingRating.value)}
+                                />
+                                ) : (
+                                <span className="rating-cell" title="Click to edit rating"
+                                    style={{ cursor: 'text' }}
+                                    onClick={() => setEditingRating({ id: e.id, value: String(e.rating ?? '') })}>
+                                    {e.rating != null ? e.rating : '—'}<span>/10</span>
+                                </span>
+                                )}
+                            </td>
                             </tr>
                         );
                         })}
@@ -283,12 +327,14 @@ export default function DashboardAlt({ onFilterChange }) {
                     <table className="media-table">
                     <thead>
                         <tr>
-                        <th>Title</th><th>Type</th><th>Progress</th><th>Status</th>
+                        <th>Title</th><th>Type</th><th>Progress</th><th>Status</th><th>Rating</th>
                         </tr>
                     </thead>
                     <tbody>
                         {planned.slice(0, 10).map(e => {
                         const pct = progressPercent(e);
+                        const isEditingProg   = editingProgress?.id === e.id;
+                        const isEditingRating = editingRating?.id === e.id;
                         return (
                         <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
                             <td>
@@ -298,21 +344,63 @@ export default function DashboardAlt({ onFilterChange }) {
                             </div>
                             </td>
                             <td><span style={{ color: 'var(--dim)' }}>{e.medium ?? '—'}</span></td>
-                            <td>
-                            <div className="progress-cell">
+                            <td onClick={ev => ev.stopPropagation()}>
+                            {isEditingProg ? (
+                                <input
+                                className="inline-select"
+                                type="number" min="0"
+                                style={{ width: 64 }}
+                                value={editingProgress.value}
+                                autoFocus
+                                onChange={ev => setEditingProgress({ id: e.id, value: ev.target.value })}
+                                onKeyDown={ev => {
+                                    if (ev.key === 'Enter') handleProgressSave(e.id, editingProgress.value);
+                                    if (ev.key === 'Escape') setEditingProgress(null);
+                                }}
+                                onBlur={() => handleProgressSave(e.id, editingProgress.value)}
+                                />
+                            ) : (
+                                <div className="progress-cell"
+                                title="Click to edit progress"
+                                style={{ cursor: 'text' }}
+                                onClick={() => setEditingProgress({ id: e.id, value: String(e.progress ?? '') })}>
                                 {progressLabel(e)}
                                 {pct > 0 && (
-                                <div className="progress-mini">
+                                    <div className="progress-mini">
                                     <div className="progress-mini-fill" style={{ width: `${pct}%` }} />
-                                </div>
+                                    </div>
                                 )}
-                            </div>
+                                </div>
+                            )}
                             </td>
                             <td onClick={ev => ev.stopPropagation()}>
                             <select className="inline-select" value={e.status}
                                 onChange={ev => handleStatusChange(e.id, ev.target.value)}>
                                 {STATUSES.map(s => <option key={s} value={s}>{statusLabel(s)}</option>)}
                             </select>
+                            </td>
+                            <td onClick={ev => ev.stopPropagation()}>
+                            {isEditingRating ? (
+                                <input
+                                className="inline-select"
+                                type="number" min="0" max="10" step="0.1"
+                                style={{ width: 64 }}
+                                value={editingRating.value}
+                                autoFocus
+                                onChange={ev => setEditingRating({ id: e.id, value: ev.target.value })}
+                                onKeyDown={ev => {
+                                    if (ev.key === 'Enter') handleRatingSave(e.id, editingRating.value);
+                                    if (ev.key === 'Escape') setEditingRating(null);
+                                }}
+                                onBlur={() => handleRatingSave(e.id, editingRating.value)}
+                                />
+                            ) : (
+                                <span className="rating-cell" title="Click to edit rating"
+                                style={{ cursor: 'text' }}
+                                onClick={() => setEditingRating({ id: e.id, value: String(e.rating ?? '') })}>
+                                {e.rating != null ? e.rating : '—'}<span>/10</span>
+                                </span>
+                            )}
                             </td>
                         </tr>
                         );
@@ -346,6 +434,8 @@ export default function DashboardAlt({ onFilterChange }) {
                 <tbody>
                     {recent.map(e => {
                     const pct = progressPercent(e);
+                    const isEditingProg   = editingProgress?.id === e.id;
+                    const isEditingRating = editingRating?.id === e.id;
                     return (
                     <tr key={e.id} style={{ cursor: 'pointer' }} onClick={() => setDetailEntry(e)}>
                         <td>
@@ -355,22 +445,59 @@ export default function DashboardAlt({ onFilterChange }) {
                         </div>
                         </td>
                         <td><span style={{ color: 'var(--dim)' }}>{[e.medium, e.origin].filter(Boolean).join(' / ')}</span></td>
-                        <td>
-                        <div className="progress-cell">
+                        <td onClick={ev => ev.stopPropagation()}>
+                        {isEditingProg ? (
+                            <input
+                            className="inline-select"
+                            type="number" min="0"
+                            style={{ width: 64 }}
+                            value={editingProgress.value}
+                            autoFocus
+                            onChange={ev => setEditingProgress({ id: e.id, value: ev.target.value })}
+                            onKeyDown={ev => {
+                                if (ev.key === 'Enter') handleProgressSave(e.id, editingProgress.value);
+                                if (ev.key === 'Escape') setEditingProgress(null);
+                            }}
+                            onBlur={() => handleProgressSave(e.id, editingProgress.value)}
+                            />
+                        ) : (
+                            <div className="progress-cell"
+                            title="Click to edit progress"
+                            style={{ cursor: 'text' }}
+                            onClick={() => setEditingProgress({ id: e.id, value: String(e.progress ?? '') })}>
                             {progressLabel(e)}
                             {pct > 0 && (
-                            <div className="progress-mini">
+                                <div className="progress-mini">
                                 <div className="progress-mini-fill" style={{ width: `${pct}%` }} />
-                            </div>
+                                </div>
                             )}
-                        </div>
+                            </div>
+                        )}
                         </td>
                         <td><span style={{ color: 'var(--dim)' }}>{fmtDate(e.completed_at || e.updated_at)}</span></td>
                         <td><span className={badgeClass(e.status)}>{statusLabel(e.status)}</span></td>
-                        <td>
-                        <span className="rating-cell">
+                        <td onClick={ev => ev.stopPropagation()}>
+                        {isEditingRating ? (
+                            <input
+                            className="inline-select"
+                            type="number" min="0" max="10" step="0.1"
+                            style={{ width: 64 }}
+                            value={editingRating.value}
+                            autoFocus
+                            onChange={ev => setEditingRating({ id: e.id, value: ev.target.value })}
+                            onKeyDown={ev => {
+                                if (ev.key === 'Enter') handleRatingSave(e.id, editingRating.value);
+                                if (ev.key === 'Escape') setEditingRating(null);
+                            }}
+                            onBlur={() => handleRatingSave(e.id, editingRating.value)}
+                            />
+                        ) : (
+                            <span className="rating-cell" title="Click to edit rating"
+                            style={{ cursor: 'text' }}
+                            onClick={() => setEditingRating({ id: e.id, value: String(e.rating ?? '') })}>
                             {e.rating != null ? e.rating : '—'}<span>/10</span>
-                        </span>
+                            </span>
+                        )}
                         </td>
                     </tr>
                     );
