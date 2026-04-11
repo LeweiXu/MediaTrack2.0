@@ -11,6 +11,14 @@ Schedule via cron (see README or comments below).
 import sys
 import os
 import logging
+
+# Resolve the backend/ directory and make it the cwd so that pydantic-settings
+# finds .env, and sibling modules (config, db, models) are importable regardless
+# of where the script is invoked from (direct run, different cwd, or cron).
+_BACKEND_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
+os.chdir(_BACKEND_DIR)
+sys.path.insert(0, _BACKEND_DIR)
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from config import get_settings
