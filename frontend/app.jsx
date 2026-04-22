@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
-import Dashboard  from './pages/Dashboard.jsx';
-import Library    from './pages/Library.jsx';
-import Statistics from './pages/Statistics.jsx';
+import Dashboard   from './pages/Dashboard.jsx';
+import Library     from './pages/Library.jsx';
+import Statistics  from './pages/Statistics.jsx';
+import LandingPage from './pages/LandingPage.jsx';
 import AuthModal      from './pages/components/AuthModal.jsx';
 import SettingsModal  from './pages/components/SettingsModal.jsx';
 import { BASE } from './api.jsx';
@@ -30,14 +31,17 @@ export default function App() {
   }
 
   // ── Auth state ─────────────────────────────────────────────────────────────
-  const [token,    setToken]    = useState(() => localStorage.getItem('auth_token')    || '');
-  const [username, setUsername] = useState(() => localStorage.getItem('auth_username') || '');
+  const [token,         setToken]         = useState(() => localStorage.getItem('auth_token')    || '');
+  const [username,      setUsername]      = useState(() => localStorage.getItem('auth_username') || '');
+  const [showAuthModal,  setShowAuthModal]  = useState(false);
+  const [authModalTab,   setAuthModalTab]   = useState('login');
 
   const isAuthenticated = Boolean(token);
 
   function handleAuth(newToken, newUsername) {
     setToken(newToken);
     setUsername(newUsername);
+    setShowAuthModal(false);
     navigate('/dashboard');
   }
 
@@ -46,6 +50,7 @@ export default function App() {
     localStorage.removeItem('auth_username');
     setToken('');
     setUsername('');
+    navigate('/');
   }
 
   /* ── Health check every 30s ── */
@@ -84,20 +89,22 @@ export default function App() {
       {/* ── Topbar ── */}
       <div className="topbar">
         <span className="topbar-logo">LOG</span>
-        <span className="topbar-sep">|</span>
+        {isAuthenticated && <span className="topbar-sep">|</span>}
 
-        <nav className="topbar-nav">
-          <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : undefined}>
-            Dashboard
-          </NavLink>
-          <NavLink to="/library" className={({ isActive }) => isActive ? 'active' : undefined}
-            onClick={() => setLibraryFilters({})}>
-            Library
-          </NavLink>
-          <NavLink to="/statistics" className={({ isActive }) => isActive ? 'active' : undefined}>
-            Statistics
-          </NavLink>
-        </nav>
+        {isAuthenticated && (
+          <nav className="topbar-nav">
+            <NavLink to="/dashboard" className={({ isActive }) => isActive ? 'active' : undefined}>
+              Dashboard
+            </NavLink>
+            <NavLink to="/library" className={({ isActive }) => isActive ? 'active' : undefined}
+              onClick={() => setLibraryFilters({})}>
+              Library
+            </NavLink>
+            <NavLink to="/statistics" className={({ isActive }) => isActive ? 'active' : undefined}>
+              Statistics
+            </NavLink>
+          </nav>
+        )}
 
         <div className="topbar-right">
           {online === null && <span style={{ color: 'var(--dim)' }}>connecting…</span>}
@@ -107,31 +114,53 @@ export default function App() {
           <button className="theme-toggle" onClick={toggleTheme} title="Toggle theme">
             {theme === 'dark' ? '○' : '●'}
           </button>
-          {isAuthenticated && (
+          {isAuthenticated ? (
             <>
               <span className="topbar-user topbar-user-btn" onClick={() => setShowSettings(true)}>{username}</span>
               <button className="btn-logout" onClick={handleLogout}>logout</button>
             </>
+          ) : (
+            <button className="topbar-login-btn" onClick={() => { setAuthModalTab('login'); setShowAuthModal(true); }}>
+              login
+            </button>
           )}
         </div>
       </div>
 
-      {/* ── Auth modal (shown over the page when unauthenticated) ── */}
-      {!isAuthenticated && <AuthModal onAuth={handleAuth} />}
+      {/* ── Auth modal (shown on demand) ── */}
+      {!isAuthenticated && showAuthModal && (
+        <AuthModal onAuth={handleAuth} onClose={() => setShowAuthModal(false)} defaultTab={authModalTab} />
+      )}
 
       {/* ── Routes ── */}
       <Routes>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard"  element={<Dashboard  key={username} onFilterChange={handleFilterChange} />} />
-        <Route path="/library"    element={<Library    key={username + JSON.stringify(libraryFilters)} initialFilters={libraryFilters} />} />
-        <Route path="/statistics" element={<Statistics key={username} />} />
-        <Route path="*"           element={<Navigate to="/dashboard" replace />} />
+        <Route path="/"
+          element={isAuthenticated
+            ? <Navigate to="/dashboard" replace />
+            : <LandingPage onOpenAuth={tab => { setAuthModalTab(tab); setShowAuthModal(true); }} />}
+        />
+        <Route path="/dashboard"
+          element={isAuthenticated
+            ? <Dashboard key={username} onFilterChange={handleFilterChange} />
+            : <Navigate to="/" replace />}
+        />
+        <Route path="/library"
+          element={isAuthenticated
+            ? <Library key={username + JSON.stringify(libraryFilters)} initialFilters={libraryFilters} />
+            : <Navigate to="/" replace />}
+        />
+        <Route path="/statistics"
+          element={isAuthenticated
+            ? <Statistics key={username} />
+            : <Navigate to="/" replace />}
+        />
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/dashboard" : "/"} replace />} />
       </Routes>
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onDataDeleted={() => { setShowSettings(false); navigate('/library'); }} />}
 
       {/* ── Footer ── */}
-      <footer className="app-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {isAuthenticated && <footer className="app-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <span>© 2026 Lewei Xu</span>
           <span className="footer-sep">·</span>
@@ -145,7 +174,7 @@ export default function App() {
         >
           https://github.com/LeweiXu/LOG-Media-Library
         </a>
-      </footer>
+      </footer>}
     </div>
   );
 }

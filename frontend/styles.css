@@ -820,3 +820,115 @@ input, select, textarea { font-family: 'IBM Plex Mono', monospace; }
 .rating-dist-row .r-bar-bg { height: 4px; background: var(--border); position: relative; }
 .rating-dist-row .r-bar-v  { position: absolute; left: 0; top: 0; height: 100%; background: var(--amber); transition: width 0.6s ease; }
 .rating-dist-row .r-cnt    { color: var(--dim); }
+
+/* ── Topbar login button (unauthenticated) ───────────────────────────────── */
+.topbar-right .topbar-login-btn {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--dim);
+  font-size: 11px;
+  padding: 2px 10px;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.05em;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.topbar-right .topbar-login-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ── Landing page ────────────────────────────────────────────────────────── */
+.landing {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px 60px;
+  min-height: 0;
+}
+
+.landing-center {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  max-width: 520px;
+  width: 100%;
+}
+
+.landing-logo {
+  font-size: 48px;
+  font-weight: 500;
+  color: var(--bright);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  margin-bottom: 20px;
+}
+
+.landing-cursor {
+  color: var(--accent);
+  animation: blink 1.1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+.landing-tagline {
+  font-size: 14px;
+  color: var(--text);
+  margin-bottom: 12px;
+  letter-spacing: 0.02em;
+}
+
+.landing-desc {
+  font-size: 12px;
+  color: var(--dim);
+  line-height: 1.8;
+  margin-bottom: 24px;
+}
+
+.landing-media-types {
+  font-size: 11px;
+  color: var(--dim);
+  margin-bottom: 32px;
+  line-height: 1.9;
+}
+
+.landing-type     { color: var(--text); }
+.landing-type-sep { color: var(--border2); }
+
+.landing-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.landing-btn-primary  { padding: 8px 20px; font-size: 12px; letter-spacing: 0.08em; }
+.landing-btn-secondary { padding: 8px 20px; font-size: 12px; letter-spacing: 0.08em; }
+
+.landing-demo {
+  font-size: 11px;
+  color: var(--dim);
+}
+
+.landing-prompt    { color: var(--border2); }
+.landing-demo-cred { color: var(--accent); }
+
+.landing-footer-note {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 10px 24px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.landing-feature     { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.landing-feature-sep { color: var(--border2); font-size: 12px; }

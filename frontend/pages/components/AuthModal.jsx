@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { login, register } from '../../api.jsx';
 
-export default function AuthModal({ onAuth }) {
-  const [tab,      setTab]      = useState('login');
+export default function AuthModal({ onAuth, onClose, defaultTab = 'login' }) {
+  const [tab,      setTab]      = useState(defaultTab);
   const [loading,  setLoading]  = useState(false);
   const [error,    setError]    = useState('');
 
@@ -59,11 +59,19 @@ export default function AuthModal({ onAuth }) {
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" onClick={onClose ? e => { if (e.target === e.currentTarget) onClose(); } : undefined}>
       <div className="modal" style={{ width: 360 }}>
 
         <div className="modal-header">
           <span className="modal-title">LOG — {tab === 'login' ? 'Sign In' : 'Register'}</span>
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{ background: 'none', border: 'none', color: 'var(--dim)', fontSize: 16, lineHeight: 1, padding: '2px 4px' }}
+            >
+              ×
+            </button>
+          )}
         </div>
 
         {/* Tab switcher */}
