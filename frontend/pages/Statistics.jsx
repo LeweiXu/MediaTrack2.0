@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getEntries, getStats } from '../api.jsx';
-import { extractItems, usePageEntrance } from '../utils.jsx';
+import { extractItems } from '../utils.jsx';
+import { SkeletonChartBox, SkeletonLine, SkeletonTable } from './components/Skeletons.jsx';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   CartesianGrid, PieChart, Pie, Cell,
@@ -31,6 +32,76 @@ function StatCard({ val, label, sub }) {
       <span className="stats-card-val">{val ?? '—'}</span>
       <span className="stats-card-lbl">{label}</span>
       {sub && <span className="stats-card-sub">{sub}</span>}
+    </div>
+  );
+}
+
+function StatisticsSkeleton() {
+  return (
+    <div className="skeleton-page" aria-label="Loading statistics">
+      <div className="stats-grid">
+        {['Total Entries', 'Completed', 'Avg Rating', 'Media Types'].map((label, i) => (
+          <div key={label} className="stats-card">
+            <SkeletonLine width={i === 2 ? 68 : 48} height={28} />
+            <span className="stats-card-lbl">{label}</span>
+            {i === 2 && <SkeletonLine width={82} height={10} style={{ marginTop: 6 }} />}
+          </div>
+        ))}
+      </div>
+
+      <div className="chart-section">
+        <div className="chart-section-title">Consumed per Month</div>
+        <SkeletonChartBox variant="plot" />
+      </div>
+
+      <div className="charts-2col" style={{ marginBottom: 28 }}>
+        <SkeletonChartBox rows={7} />
+        <SkeletonChartBox rows={7} />
+      </div>
+
+      <div className="charts-2col" style={{ marginBottom: 28 }}>
+        <div className="chart-box">
+          <SkeletonLine width={72} height={10} style={{ marginBottom: 18 }} />
+          <div className="skeleton-pie-layout">
+            <div className="skeleton-pie" />
+            <div style={{ flex: 1 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton-legend-row">
+                  <SkeletonLine width={8} height={8} />
+                  <SkeletonLine width={`${48 + i * 8}%`} height={10} />
+                  <SkeletonLine width={20} height={10} style={{ marginLeft: 'auto' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="chart-box">
+          <SkeletonLine width={72} height={10} style={{ marginBottom: 18 }} />
+          <div className="skeleton-pie-layout">
+            <div className="skeleton-pie" />
+            <div style={{ flex: 1 }}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="skeleton-legend-row">
+                  <SkeletonLine width={8} height={8} />
+                  <SkeletonLine width={`${52 + i * 6}%`} height={10} />
+                  <SkeletonLine width={20} height={10} style={{ marginLeft: 'auto' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="chart-section">
+        <div className="chart-section-title">Top Rated</div>
+        <div className="chart-box">
+          <SkeletonTable
+            headers={['#', 'Title', 'Medium', 'Origin', 'Rating']}
+            rows={7}
+            widths={['30%', '78%', '54%', '52%', '42%']}
+          />
+        </div>
+      </div>
     </div>
   );
 }
@@ -112,7 +183,6 @@ const MONTH_INPUT_STYLE = {
 };
 
 export default function Statistics() {
-  const shouldAnimateOnEnter = usePageEntrance();
   const [apiStats,   setApiStats]   = useState(null);
   const [entries,    setEntries]    = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -195,16 +265,11 @@ export default function Statistics() {
     () => (s.by_origin || []).slice(0, 6).map(({ origin, count }) => ({ name: origin, value: count })),
     [s.by_origin],
   );
-  const enterClass = shouldAnimateOnEnter ? 'page-enter-active' : '';
-  const enterStyle = (delay) => (
-    shouldAnimateOnEnter ? { '--page-enter-delay': `${delay}ms` } : undefined
-  );
-
   return (
     <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div className="stats-layout">
 
-        <div className={`page-head ${enterClass}`} style={{ ...enterStyle(40), marginBottom: 24 }}>
+        <div className="page-head" style={{ marginBottom: 24 }}>
           <div className="page-head-left">
             <span className="page-title">Statistics</span>
             <span className="page-desc">insights into your media habits</span>
@@ -218,16 +283,12 @@ export default function Statistics() {
           </div>
         )}
 
-        {loading && (
-          <div className="state-block">
-            <span className="loading-dots">Loading statistics</span>
-          </div>
-        )}
+        {loading && <StatisticsSkeleton />}
 
         {!loading && !error && (
           <>
             {/* Summary cards */}
-            <div className={`stats-grid ${enterClass}`} style={enterStyle(85)}>
+            <div className="stats-grid">
               <StatCard val={s.total}     label="Total Entries" />
               <StatCard val={s.completed} label="Completed" />
               <StatCard val={s.avg_rating != null ? s.avg_rating.toFixed(2) : '—'} label="Avg Rating" sub="rated entries" />
@@ -236,7 +297,7 @@ export default function Statistics() {
 
             {/* Entries per month */}
             {allMonths.length > 0 && (
-              <div className={`chart-section ${enterClass}`} style={enterStyle(125)}>
+              <div className="chart-section">
                 <div className="chart-section-title">
                   Consumed per Month
                   <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', textTransform: 'none', letterSpacing: 'normal' }}>
@@ -261,7 +322,7 @@ export default function Statistics() {
               </div>
             )}
 
-            <div className={`charts-2col ${enterClass}`} style={{ ...enterStyle(165), marginBottom: 28 }}>
+            <div className="charts-2col" style={{ marginBottom: 28 }}>
               {/* By medium */}
               {s.by_medium?.length > 0 && (
                 <div className="chart-box">
@@ -298,7 +359,7 @@ export default function Statistics() {
               )}
             </div>
 
-            <div className={`charts-2col ${enterClass}`} style={{ ...enterStyle(205), marginBottom: 28 }}>
+            <div className="charts-2col" style={{ marginBottom: 28 }}>
               {/* Status pie */}
               {statusPieData.length > 0 && (
                 <div className="chart-box">
@@ -348,7 +409,7 @@ export default function Statistics() {
 
             {/* Top rated */}
             {s.top_rated?.length > 0 && (
-              <div className={`chart-section ${enterClass}`} style={enterStyle(245)}>
+              <div className="chart-section">
                 <div className="chart-section-title">Top Rated</div>
                 <div className="chart-box">
                   <table className="media-table">
@@ -373,7 +434,7 @@ export default function Statistics() {
 
             {/* By release year */}
             {s.by_year?.length > 0 && (
-              <div className={`chart-section ${enterClass}`} style={enterStyle(285)}>
+              <div className="chart-section">
                 <div className="chart-section-title">Entries by Release Year</div>
                 <div className="chart-box">
                   <ResponsiveContainer width="100%" height={160}>

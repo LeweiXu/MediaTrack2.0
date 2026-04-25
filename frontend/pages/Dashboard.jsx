@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getEntries, getStats, updateEntry } from '../api.jsx';
-import { statusLabel, badgeClass, fmtDate, progressLabel, progressPercent, timeAgo, extractItems, STATUSES, logDotClass, usePageEntrance } from '../utils.jsx';
+import { statusLabel, badgeClass, fmtDate, progressLabel, progressPercent, timeAgo, extractItems, STATUSES, logDotClass } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
 import EntryDetailModal from './components/EntryDetailModal.jsx';
+import { SkeletonActivity, SkeletonLine, SkeletonSidebarRows, SkeletonStatGrid, SkeletonTable } from './components/Skeletons.jsx';
 
 function CoverThumb({ url, title }) {
   return (
@@ -16,7 +17,6 @@ function CoverThumb({ url, title }) {
 }
 
 export default function DashboardAlt({ onFilterChange }) {
-  const shouldAnimateOnEnter = usePageEntrance();
   const [stats,           setStats]           = useState(null);
   const [current,         setCurrent]         = useState([]);
   const [planned,         setPlanned]         = useState([]);
@@ -150,17 +150,10 @@ export default function DashboardAlt({ onFilterChange }) {
 
   const s       = stats || {};
   const maxBar  = monthBarsData.length ? Math.max(...monthBarsData.map(m => m.count), 1) : 1;
-  const enterClass = shouldAnimateOnEnter ? 'page-enter-active' : '';
-  const enterStyle = (delay) => (
-    shouldAnimateOnEnter ? { '--page-enter-delay': `${delay}ms` } : undefined
-  );
-
   return (
     <div className="layout-3col">
       {/* ── Left sidebar ── */}
-      <div
-        className={`sidebar-left ${enterClass} page-enter-side-left`}
-        style={enterStyle(20)}>
+      <div className="sidebar-left">
         <div className="sidebar-section">
           <span className="sidebar-label">Status</span>
           {[
@@ -174,7 +167,9 @@ export default function DashboardAlt({ onFilterChange }) {
             <div key={key} className="sidebar-item"
               onClick={() => onFilterChange({ status: key })}>
               {label}
-              {count != null && <span className="sidebar-count">{count}</span>}
+              {loading
+                ? <SkeletonLine width={24} height={14} />
+                : count != null && <span className="sidebar-count">{count}</span>}
             </div>
           ))}
         </div>
@@ -183,30 +178,34 @@ export default function DashboardAlt({ onFilterChange }) {
 
         <div className="sidebar-section">
           <span className="sidebar-label">Medium</span>
-          {(s.by_medium ?? []).map(({ medium, count }) => (
-            <div key={medium} className="sidebar-item"
-              onClick={() => onFilterChange({ medium })}>
-              {medium} <span className="sidebar-count">{count}</span>
-            </div>
-          ))}
+          {loading
+            ? <SkeletonSidebarRows rows={6} />
+            : (s.by_medium ?? []).map(({ medium, count }) => (
+                <div key={medium} className="sidebar-item"
+                  onClick={() => onFilterChange({ medium })}>
+                  {medium} <span className="sidebar-count">{count}</span>
+                </div>
+              ))}
         </div>
 
         <div className="sidebar-divider" />
 
         <div className="sidebar-section">
           <span className="sidebar-label">Origin</span>
-          {(s.by_origin ?? []).map(({ origin, count }) => (
-            <div key={origin} className="sidebar-item"
-              onClick={() => onFilterChange({ origin })}>
-              {origin} <span className="sidebar-count">{count}</span>
-            </div>
-          ))}
+          {loading
+            ? <SkeletonSidebarRows rows={5} />
+            : (s.by_origin ?? []).map(({ origin, count }) => (
+                <div key={origin} className="sidebar-item"
+                  onClick={() => onFilterChange({ origin })}>
+                  {origin} <span className="sidebar-count">{count}</span>
+                </div>
+              ))}
         </div>
       </div>
 
       {/* ── Main ── */}
       <div className="main-content">
-        <div className={`page-head ${enterClass}`} style={enterStyle(70)}>
+        <div className="page-head">
           <div className="page-head-left">
             <span className="page-title">Dashboard</span>
             <span className="page-desc">personal media log</span>
@@ -223,8 +222,43 @@ export default function DashboardAlt({ onFilterChange }) {
         )}
 
         {!error && loading && (
-          <div className="state-block">
-            <span className="loading-dots">Connecting to server</span>
+          <div className="skeleton-page" aria-label="Loading dashboard">
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: '0 24px',
+                alignItems: 'start',
+              }}>
+              <div>
+                <div className="section-header">Currently Consuming</div>
+                <SkeletonTable
+                  headers={['Title', 'Type', 'Progress', 'Status', 'Rating']}
+                  rows={8}
+                  cover
+                  widths={['78%', '58%', '72%', '66%', '46%']}
+                />
+              </div>
+              <div>
+                <div className="section-header">Planned</div>
+                <SkeletonTable
+                  headers={['Title', 'Type', 'Progress', 'Status', 'Rating']}
+                  rows={8}
+                  cover
+                  widths={['74%', '54%', '64%', '66%', '46%']}
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="section-header">Recently Completed</div>
+              <SkeletonTable
+                headers={['Title', 'Type', 'Progress', 'Completed', 'Status', 'Rating']}
+                rows={7}
+                cover
+                widths={['76%', '60%', '68%', '58%', '62%', '42%']}
+              />
+            </div>
           </div>
         )}
 
@@ -232,16 +266,7 @@ export default function DashboardAlt({ onFilterChange }) {
           <>
           {/* Side-by-side layout for the two tables */}
             <div
-              className={enterClass}
-              style={shouldAnimateOnEnter
-                ? {
-                    '--page-enter-delay': '120ms',
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: '0 24px',
-                    alignItems: 'start',
-                  }
-                : { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px', alignItems: 'start' }}>
+              style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 24px', alignItems: 'start' }}>
 
             {/* Currently Consuming */}
             <div>
@@ -447,7 +472,7 @@ export default function DashboardAlt({ onFilterChange }) {
 
             </div>
 
-            <div className={enterClass} style={enterStyle(170)}>
+            <div>
       <div className="section-header">Recently Completed</div>
       {recent.length === 0
       ? <div style={{ color: 'var(--dim)', fontSize: 12 }}>No completed entries yet.</div>
@@ -541,30 +566,46 @@ export default function DashboardAlt({ onFilterChange }) {
       </div>
 
       {/* ── Right sidebar ── */}
-      <div
-        className={`sidebar-right ${enterClass} page-enter-side-right`}
-        style={enterStyle(110)}>
+      <div className="sidebar-right">
         <p className="panel-title">Summary</p>
-        <div className="stat-grid">
-          <div className="stat-box">
-            <span className="stat-val">{s.total ?? '—'}</span>
-            <span className="stat-lbl">Total</span>
+        {loading ? (
+          <SkeletonStatGrid />
+        ) : (
+          <div className="stat-grid">
+            <div className="stat-box">
+              <span className="stat-val">{s.total ?? '—'}</span>
+              <span className="stat-lbl">Total</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-val">{s.avg_rating ? s.avg_rating.toFixed(1) : '—'}</span>
+              <span className="stat-lbl">Avg Rating</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-val">{s.current ?? current.length}</span>
+              <span className="stat-lbl">Active</span>
+            </div>
+            <div className="stat-box">
+              <span className="stat-val">{s.planned ?? '—'}</span>
+              <span className="stat-lbl">Planned</span>
+            </div>
           </div>
-          <div className="stat-box">
-            <span className="stat-val">{s.avg_rating ? s.avg_rating.toFixed(1) : '—'}</span>
-            <span className="stat-lbl">Avg Rating</span>
-          </div>
-          <div className="stat-box">
-            <span className="stat-val">{s.current ?? current.length}</span>
-            <span className="stat-lbl">Active</span>
-          </div>
-          <div className="stat-box">
-            <span className="stat-val">{s.planned ?? '—'}</span>
-            <span className="stat-lbl">Planned</span>
-          </div>
-        </div>
+        )}
 
-        {monthBarsData.length > 0 && (
+        {loading && (
+          <>
+            <p className="panel-title">Consumed / Month</p>
+            <div className="chart-area skeleton-mini-chart" aria-hidden="true">
+              {Array.from({ length: 7 }).map((_, i) => (
+                <div key={i} className="bar-col">
+                  <SkeletonLine width="100%" height={`${18 + (i % 4) * 8}px`} />
+                  <SkeletonLine width="80%" height={8} />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {!loading && monthBarsData.length > 0 && (
           <>
             <p className="panel-title">Consumed / Month</p>
             <div className="chart-area">
@@ -580,7 +621,9 @@ export default function DashboardAlt({ onFilterChange }) {
         )}
 
         <p className="panel-title" style={{ marginTop: 18 }}>Activity Log</p>
-        {activity.length === 0
+        {loading
+          ? <SkeletonActivity rows={8} />
+          : activity.length === 0
           ? <div style={{ color: 'var(--dim)', fontSize: 11 }}>No recent activity.</div>
           : activity.map((a, i) => (
               <div key={i} className="log-entry">

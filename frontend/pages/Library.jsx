@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getEntries, updateEntry, deleteEntry, exportEntries } from '../api.jsx';
-import { statusLabel, fmtDate, progressPercent, progressLabel, extractItems, MEDIUMS, STATUSES, ORIGINS, usePageEntrance } from '../utils.jsx';
+import { statusLabel, fmtDate, progressPercent, progressLabel, extractItems, MEDIUMS, STATUSES, ORIGINS } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
 import EntryDetailModal from './components/EntryDetailModal.jsx';
 import ImportModal from './components/ImportModal.jsx';
 import ImportAutoModal from './components/ImportAutoModal.jsx';
 import ImportMalModal from './components/ImportMalModal.jsx';
+import { SkeletonLine, SkeletonTable } from './components/Skeletons.jsx';
 
 const SORT_FIELDS = [
   { key: 'title',        label: 'Title' },
@@ -20,7 +21,6 @@ const SORT_FIELDS = [
 const PAGE_SIZE_OPTIONS = [20, 40, 60, 80, 100];
 
 export default function Library({ initialFilters = {} }) {
-  const shouldAnimateOnEnter = usePageEntrance();
   const [entries,      setEntries]      = useState([]);
   const [total,        setTotal]        = useState(0);
   const [loading,      setLoading]      = useState(true);
@@ -151,11 +151,6 @@ export default function Library({ initialFilters = {} }) {
   const clearFilters = () => { setSearch(''); setStatusFilter(''); setMediumFilter(''); setOriginFilter(''); };
   const hasFilters   = search || statusFilter || mediumFilter || originFilter;
   const totalPages   = Math.ceil(total / limit);
-  const enterClass = shouldAnimateOnEnter ? 'page-enter-active' : '';
-  const enterStyle = (delay) => (
-    shouldAnimateOnEnter ? { '--page-enter-delay': `${delay}ms` } : undefined
-  );
-
   const SortTh = ({ field, children }) => (
     <th className="sortable"
       onClick={() => handleSort(field)}
@@ -185,9 +180,7 @@ export default function Library({ initialFilters = {} }) {
   return (
     <div className="layout-3col">
       {/* ── Left sidebar ── */}
-      <div
-        className={`sidebar-left ${enterClass} page-enter-side-left`}
-        style={enterStyle(20)}>
+      <div className="sidebar-left">
         <div className="sidebar-section">
           <span className="sidebar-label">Status</span>
           {[['', 'All'], ['current','Current'], ['planned','Planned'],
@@ -197,7 +190,9 @@ export default function Library({ initialFilters = {} }) {
               className={`sidebar-item${statusFilter === v ? ' active' : ''}`}
               onClick={() => setStatusFilter(v)}>
               {l}
-              <span className="sidebar-count">{v === '' ? (counts._total || 0) : (counts[v] || 0)}</span>
+              {loading
+                ? <SkeletonLine width={24} height={14} />
+                : <span className="sidebar-count">{v === '' ? (counts._total || 0) : (counts[v] || 0)}</span>}
             </div>
           ))}
         </div>
@@ -209,7 +204,10 @@ export default function Library({ initialFilters = {} }) {
           <div className={`sidebar-item${mediumFilter === '' ? ' active' : ''}`} onClick={() => setMediumFilter('')}>All</div>
           {MEDIUMS.map(m => (
             <div key={m} className={`sidebar-item${mediumFilter === m ? ' active' : ''}`} onClick={() => setMediumFilter(m)}>
-              {m} <span className="sidebar-count">{counts[m] || 0}</span>
+              {m}
+              {loading
+                ? <SkeletonLine width={24} height={14} />
+                : <span className="sidebar-count">{counts[m] || 0}</span>}
             </div>
           ))}
         </div>
@@ -229,15 +227,17 @@ export default function Library({ initialFilters = {} }) {
 
       {/* ── Main ── */}
       <div className="main-content">
-        <div className={`page-head ${enterClass}`} style={enterStyle(70)}>
+        <div className="page-head">
           <div className="page-head-left">
             <span className="page-title">Library</span>
-            <span className="page-desc">{total} entries</span>
+            <span className="page-desc">
+              {loading ? <SkeletonLine width={74} height={11} /> : `${total} entries`}
+            </span>
           </div>
           <button className="btn" onClick={() => setShowAdd(true)}>+ Add Entry</button>
         </div>
 
-        <div className={`filter-bar ${enterClass}`} style={enterStyle(110)}>
+        <div className="filter-bar">
           <input placeholder="Search titles…" value={search} style={{ width: 200 }}
             onChange={e => setSearch(e.target.value)} />
           <select value={sort} onChange={e => setSort(e.target.value)}>
@@ -266,8 +266,13 @@ export default function Library({ initialFilters = {} }) {
         )}
 
         {!error && loading && (
-          <div className="state-block">
-            <span className="loading-dots">Loading library</span>
+          <div className="skeleton-page" aria-label="Loading library">
+            <SkeletonTable
+              headers={['Title', 'Medium', 'Year', 'Progress', 'Status', 'Rating', 'Updated', 'Completed', 'Actions']}
+              rows={12}
+              cover
+              widths={['78%', '64%', '42%', '70%', '68%', '44%', '58%', '58%', '76%']}
+            />
           </div>
         )}
 
@@ -279,7 +284,7 @@ export default function Library({ initialFilters = {} }) {
         )}
 
         {!error && !loading && entries.length > 0 && (
-          <div className={enterClass} style={enterStyle(160)}>
+          <div>
               <table className="media-table">
               <thead>
                 <tr>
@@ -426,9 +431,7 @@ export default function Library({ initialFilters = {} }) {
       </div>
 
       {/* ── Right sidebar ── */}
-      <div
-        className={`sidebar-right ${enterClass} page-enter-side-right`}
-        style={enterStyle(90)}>
+      <div className="sidebar-right">
         <p className="panel-title">Sort</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 18 }}>
           {SORT_FIELDS.map(f => (
@@ -464,7 +467,9 @@ export default function Library({ initialFilters = {} }) {
         <div style={{ marginTop: 20 }}>
           <p className="panel-title">Showing</p>
           <div className="stat-box" style={{ marginBottom: 8 }}>
-            <span className="stat-val">{entries.length}</span>
+            <span className="stat-val">
+              {loading ? <SkeletonLine width={44} height={22} /> : entries.length}
+            </span>
             <span className="stat-lbl">Entries</span>
           </div>
           {statusFilter && (
