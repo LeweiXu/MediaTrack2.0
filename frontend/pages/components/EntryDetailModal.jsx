@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { fullCoverUrl } from '../../api.jsx';
 import { statusLabel, fmtDate, progressLabel } from '../../utils.jsx';
 import EntryFormModal from './EntryFormModal.jsx';
 
@@ -38,7 +37,7 @@ export default function EntryDetailModal({ entry, onClose, onUpdated, onDeleted,
         <div className="modal-body">
           {current.cover_url && (
             <div style={{ textAlign: 'center', marginBottom: 14 }}>
-              <img src={fullCoverUrl(current.cover_url)} alt="" decoding="async"
+              <img src={current.cover_url} alt=""
                 style={{ maxHeight: 320, borderRadius: 4, objectFit: 'cover' }}
                 onError={e => { e.target.style.display = 'none'; }} />
             </div>

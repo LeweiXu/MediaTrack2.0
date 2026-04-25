@@ -14,10 +14,6 @@ class Settings(BaseSettings):
     # Server
     HOST: str = "0.0.0.0"
     PORT: int = 6443
-    API_RESPONSE_DELAY_MS: int = 0
-    COVER_CACHE_DIR: str = "~/LOG_cache"
-    COVER_THUMBNAIL_WIDTH: int = 96
-    COVER_THUMBNAIL_HEIGHT: int = 144
 
     # Auth
     SECRET_KEY: str = "changeme-replace-with-a-strong-random-secret"

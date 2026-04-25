@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getEntries, getStats, thumbnailUrl, updateEntry } from '../api.jsx';
+import { getEntries, getStats, updateEntry } from '../api.jsx';
 import { statusLabel, badgeClass, fmtDate, progressLabel, progressPercent, timeAgo, extractItems, STATUSES, logDotClass } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
 import EntryDetailModal from './components/EntryDetailModal.jsx';
@@ -9,7 +9,7 @@ function CoverThumb({ url, title }) {
   return (
     <div className="cover-thumb">
       {url && (
-        <img src={thumbnailUrl(url)} alt={title} loading="lazy" decoding="async"
+        <img src={url} alt={title}
           onError={e => { e.target.style.display = 'none'; }} />
       )}
     </div>
