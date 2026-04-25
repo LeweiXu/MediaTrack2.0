@@ -167,12 +167,12 @@ export default function App() {
           <span>LOG — personal media tracker</span>
         </div>
         <a
-          href="https://github.com/LeweiXu/LOG-Media-Library"
+          href="https://github.com/LeweiXu/logarium"
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: 'inherit', textDecoration: 'underline', fontSize: 11 }}
         >
-          https://github.com/LeweiXu/LOG-Media-Library
+          https://github.com/LeweiXu/logarium
         </a>
       </footer>}
     </div>
