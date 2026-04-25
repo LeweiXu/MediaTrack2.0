@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 import logging
 
 from fastapi import FastAPI
@@ -42,6 +43,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def add_api_response_delay(request, call_next):
+    response = await call_next(request)
+    delay_ms = max(settings.API_RESPONSE_DELAY_MS, 0)
+    if delay_ms:
+        await asyncio.sleep(delay_ms / 1000)
+    return response
 
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(router)

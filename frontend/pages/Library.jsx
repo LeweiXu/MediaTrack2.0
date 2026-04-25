@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getEntries, updateEntry, deleteEntry, exportEntries } from '../api.jsx';
+import { getEntries, updateEntry, deleteEntry, exportEntries, thumbnailUrl } from '../api.jsx';
 import { statusLabel, fmtDate, progressPercent, progressLabel, extractItems, MEDIUMS, STATUSES, ORIGINS } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
 import EntryDetailModal from './components/EntryDetailModal.jsx';
@@ -310,7 +310,7 @@ export default function Library({ initialFilters = {} }) {
                         <div className="cover-cell">
                           <div className="cover-thumb">
                             {e.cover_url && (
-                              <img src={e.cover_url} alt=""
+                              <img src={thumbnailUrl(e.cover_url)} alt="" loading="lazy" decoding="async"
                                 onError={ev => { ev.target.style.display = 'none'; }} />
                             )}
                           </div>

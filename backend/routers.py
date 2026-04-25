@@ -1,8 +1,9 @@
 import io
 import json
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import OAuth2PasswordRequestForm
+import httpx
 from sqlalchemy.orm import Session
 from db import get_db
 from models import User
@@ -21,8 +22,42 @@ from services.stats_service import get_stats
 from services.export_service import export_entries_csv
 from services.import_service import preview_import, confirm_import, auto_import_rows
 from services.import_mal_service import import_mal_rows, confirm_mal_import
+from services.cover_cache_service import (
+    CoverCacheError,
+    get_cached_full_cover_path,
+    get_cached_thumbnail_path,
+)
 
 router = APIRouter()
+
+
+# ── Cover image cache ─────────────────────────────────────────────────────────
+
+@router.get("/covers/thumbnail")
+async def cover_thumbnail(url: str = Query(..., min_length=1, max_length=2000)):
+    return await _cover_file_response(get_cached_thumbnail_path, url)
+
+
+@router.get("/covers/full")
+async def cover_full(url: str = Query(..., min_length=1, max_length=2000)):
+    return await _cover_file_response(get_cached_full_cover_path, url)
+
+
+async def _cover_file_response(path_loader, url: str):
+    try:
+        path = await path_loader(url)
+    except CoverCacheError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except httpx.HTTPStatusError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Cover image fetch failed") from exc
+    except httpx.HTTPError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Cover image fetch failed") from exc
+
+    return FileResponse(
+        path,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
 
 # ── Auth routes ───────────────────────────────────────────────────────────────
 

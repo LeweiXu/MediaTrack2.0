@@ -70,6 +70,12 @@ export const createEntry = (data)      => req('/entries', { method: 'POST', body
 export const updateEntry = (id, data)  => req(`/entries/${id}`, { method: 'PUT',  body: JSON.stringify(data) });
 export const deleteEntry = (id)        => req(`/entries/${id}`, { method: 'DELETE' });
 
+export const thumbnailUrl = (coverUrl) =>
+  coverUrl ? `${BASE}/covers/thumbnail?${new URLSearchParams({ url: coverUrl })}` : '';
+
+export const fullCoverUrl = (coverUrl) =>
+  coverUrl ? `${BASE}/covers/full?${new URLSearchParams({ url: coverUrl })}` : '';
+
 export async function exportEntries() {
   const res = await fetch(`${BASE}/entries/export`, {
     headers: { Authorization: `Bearer ${getToken()}` },
