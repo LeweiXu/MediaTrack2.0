@@ -151,11 +151,19 @@ export function EntryForm({ entry = null, onCancel, onSaved, onDeleted }) {
         </div>
       </div>
 
-      <div className="form-row">
-        <label className="form-label">Rating (0–10)</label>
-        <input className="form-input" type="number" min="0" max="10" step="0.1"
-          value={form.rating} placeholder="—"
-          onChange={e => setField('rating', e.target.value)} />
+      <div className="form-row-2" style={{ marginBottom: 14 }}>
+        <div>
+          <label className="form-label">Rating (0–10)</label>
+          <input className="form-input" type="number" min="0" max="10" step="0.1"
+            value={form.rating} placeholder="—"
+            onChange={e => setField('rating', e.target.value)} />
+        </div>
+        <div>
+          <label className="form-label">Source Rating</label>
+          <input className="form-input" type="number" min="0" max="100" step="0.1"
+            value={form.external_rating} placeholder="—"
+            onChange={e => setField('external_rating', e.target.value)} />
+        </div>
       </div>
 
       <div className="form-row">

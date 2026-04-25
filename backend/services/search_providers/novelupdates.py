@@ -41,6 +41,16 @@ def _genre_from_href(href: str) -> Optional[str]:
     return " ".join(word.capitalize() for word in slug.split("-") if word)
 
 
+def _external_rating_from_text(text: str) -> Optional[float]:
+    match = re.search(r"\((\d+(?:\.\d+)?)\)", text)
+    if not match:
+        return None
+    try:
+        return round(float(match.group(1)) * 2, 1)
+    except (TypeError, ValueError):
+        return None
+
+
 async def search_novelupdates(
     client,       # httpx.AsyncClient — not used directly; kept for API consistency
     title: str,
@@ -57,6 +67,7 @@ async def search_novelupdates(
       - genres (stored joined in description and available as metadata)
       - series ID (external_id)
       - origin (from NU language code)
+      - external rating (normalised from NovelUpdates 0-5 to 0-10)
     """
     from curl_cffi import requests as cffi_requests
     from bs4 import BeautifulSoup
@@ -129,6 +140,8 @@ async def search_novelupdates(
 
             origin_code = box.select_one(".search_ratings span")
             origin = _NU_ORIGIN_MAP.get(origin_code.get_text(strip=True).upper()) if origin_code else None
+            ratings_box = box.select_one(".search_ratings")
+            external_rating = _external_rating_from_text(ratings_box.get_text(" ", strip=True)) if ratings_box else None
 
             year: Optional[int] = None
             if last_updated:
@@ -156,6 +169,7 @@ async def search_novelupdates(
                     description=description,
                     external_url=series_url,
                     genres=", ".join(genres) or None,
+                    external_rating=external_rating,
                 )
             )
 
