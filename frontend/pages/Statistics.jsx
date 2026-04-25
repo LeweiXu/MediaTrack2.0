@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getEntries, getStats } from '../api.jsx';
 import { extractItems } from '../utils.jsx';
 import { SkeletonChartBox, SkeletonLine, SkeletonTable } from './components/Skeletons.jsx';
@@ -182,13 +183,18 @@ const MONTH_INPUT_STYLE = {
   textTransform: 'none', letterSpacing: 'normal', colorScheme: 'dark', cursor: 'pointer',
 };
 
+function monthParam(value) {
+  return /^\d{4}-\d{2}$/.test(value || '') ? value : '';
+}
+
 export default function Statistics() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [apiStats,   setApiStats]   = useState(null);
   const [entries,    setEntries]    = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [error,      setError]      = useState('');
-  const [rangeStart, setRangeStart] = useState('');
-  const [rangeEnd,   setRangeEnd]   = useState('');
+  const [rangeStart, setRangeStart] = useState(() => monthParam(searchParams.get('start')));
+  const [rangeEnd,   setRangeEnd]   = useState(() => monthParam(searchParams.get('end')));
   const [barsReady,  setBarsReady]  = useState(false);
   const [pieAnimId,  setPieAnimId]  = useState(0);
 
@@ -253,6 +259,14 @@ export default function Statistics() {
     () => allMonths.filter(m => m.key >= effectiveStart && m.key <= effectiveEnd),
     [allMonths, effectiveStart, effectiveEnd],
   );
+
+  useEffect(() => {
+    if (!allMonths.length) return;
+    const params = new URLSearchParams();
+    if (rangeStart && rangeStart !== defaultStart) params.set('start', rangeStart);
+    if (rangeEnd && rangeEnd !== defaultEnd) params.set('end', rangeEnd);
+    setSearchParams(params, { replace: true });
+  }, [allMonths.length, rangeStart, rangeEnd, defaultStart, defaultEnd, setSearchParams]);
 
   const maxMedium = s.by_medium?.length ? Math.max(...s.by_medium.map(m => m.count), 1) : 1;
   const maxRating = s.rating_dist?.length ? Math.max(...s.rating_dist.map(r => r.count), 1) : 1;

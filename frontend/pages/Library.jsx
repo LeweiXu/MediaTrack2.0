@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getEntries, updateEntry, deleteEntry, exportEntries } from '../api.jsx';
 import { statusLabel, fmtDate, progressPercent, progressLabel, extractItems, MEDIUMS, STATUSES, ORIGINS } from '../utils.jsx';
 import AddEntryModal from './components/AddEntryModal.jsx';
@@ -19,8 +20,25 @@ const SORT_FIELDS = [
 ];
 
 const PAGE_SIZE_OPTIONS = [20, 40, 60, 80, 100];
+const DEFAULT_SORT = 'updated_at';
+const DEFAULT_ORDER = 'desc';
+const DEFAULT_PAGE = 1;
+const DEFAULT_LIMIT = 40;
+
+function validParam(value, allowed, fallback = '') {
+  return allowed.includes(value) ? value : fallback;
+}
+
+function positiveIntParam(value, fallback) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
 
 export default function Library({ initialFilters = {} }) {
+  const didMountRef = useRef(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const hasUrlParams = searchParams.toString() !== '';
+  const sortKeys = SORT_FIELDS.map(f => f.key);
   const [entries,      setEntries]      = useState([]);
   const [total,        setTotal]        = useState(0);
   const [loading,      setLoading]      = useState(true);
@@ -33,14 +51,14 @@ export default function Library({ initialFilters = {} }) {
   const [editingProgress,setEditingProgress] = useState(null); // { id, value }
   const [editingRating,  setEditingRating]   = useState(null); // { id, value }
 
-  const [search,       setSearch]       = useState(initialFilters.title  || '');
-  const [statusFilter, setStatusFilter] = useState(initialFilters.status || '');
-  const [mediumFilter, setMediumFilter] = useState(initialFilters.medium || '');
-  const [originFilter, setOriginFilter] = useState(initialFilters.origin || '');
-  const [sort,         setSort]         = useState('updated_at');
-  const [order,        setOrder]        = useState('desc');
-  const [page,         setPage]         = useState(1);
-  const [limit,        setLimit]        = useState(40);
+  const [search,       setSearch]       = useState(() => searchParams.get('q') || (!hasUrlParams ? initialFilters.title : '') || '');
+  const [statusFilter, setStatusFilter] = useState(() => validParam(searchParams.get('status'), STATUSES, !hasUrlParams ? initialFilters.status || '' : ''));
+  const [mediumFilter, setMediumFilter] = useState(() => validParam(searchParams.get('medium'), MEDIUMS, !hasUrlParams ? initialFilters.medium || '' : ''));
+  const [originFilter, setOriginFilter] = useState(() => validParam(searchParams.get('origin'), ORIGINS, !hasUrlParams ? initialFilters.origin || '' : ''));
+  const [sort,         setSort]         = useState(() => validParam(searchParams.get('sort'), sortKeys, DEFAULT_SORT));
+  const [order,        setOrder]        = useState(() => searchParams.get('order') === 'asc' ? 'asc' : DEFAULT_ORDER);
+  const [page,         setPage]         = useState(() => positiveIntParam(searchParams.get('page'), DEFAULT_PAGE));
+  const [limit,        setLimit]        = useState(() => validParam(Number(searchParams.get('limit')), PAGE_SIZE_OPTIONS, DEFAULT_LIMIT));
 
   const load = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(''); }
@@ -77,8 +95,27 @@ export default function Library({ initialFilters = {} }) {
   }, [search, statusFilter, mediumFilter, originFilter, sort, order, page, limit]);
 
   // reset to page 1 when filters/sort/limit change
-  useEffect(() => { setPage(1); }, [search, statusFilter, mediumFilter, originFilter, sort, order, limit]);
+  useEffect(() => {
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    setPage(1);
+  }, [search, statusFilter, mediumFilter, originFilter, sort, order, limit]);
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (statusFilter) params.set('status', statusFilter);
+    if (mediumFilter) params.set('medium', mediumFilter);
+    if (originFilter) params.set('origin', originFilter);
+    if (sort !== DEFAULT_SORT) params.set('sort', sort);
+    if (order !== DEFAULT_ORDER) params.set('order', order);
+    if (page !== DEFAULT_PAGE) params.set('page', String(page));
+    if (limit !== DEFAULT_LIMIT) params.set('limit', String(limit));
+    setSearchParams(params, { replace: true });
+  }, [search, statusFilter, mediumFilter, originFilter, sort, order, page, limit, setSearchParams]);
 
   function handleSort(field) {
     if (sort === field) setOrder(o => o === 'asc' ? 'desc' : 'asc');
