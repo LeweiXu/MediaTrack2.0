@@ -30,6 +30,7 @@ import io
 import re
 import sys
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Optional
 
@@ -163,9 +164,22 @@ def _dt_equal(a: Optional[datetime], b: Optional[datetime]) -> bool:
     return a_u.replace(microsecond=0) == b_u.replace(microsecond=0)
 
 
+def _numeric_equal(a, b) -> bool:
+    if a is None and b is None:
+        return True
+    if a is None or b is None:
+        return False
+    try:
+        return Decimal(str(a)) == Decimal(str(b))
+    except (InvalidOperation, ValueError, TypeError):
+        return a == b
+
+
 def _fields_equal(field: str, csv_val, db_val) -> bool:
     if field == "completed_at":
         return _dt_equal(csv_val, db_val)
+    if field in {"rating", "external_rating"}:
+        return _numeric_equal(csv_val, db_val)
     return csv_val == db_val
 
 
