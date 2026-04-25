@@ -1,5 +1,5 @@
 
-# LOG — Media Tracker
+# LOGARIUM — Media Tracker
 
 ## 1. Project Overview & Features
 
@@ -22,11 +22,11 @@
 **TODO**
 - **Optional:**
 - Add 'author' field for entry table, possibly split entry table into 2: entry + media to reduce redudancy.
-- Either self cache thumbnails or fetch small thumbnails for media covers for main library thumbnail display (optional, thumbnail loading is actually that slow).
+- ~~Either self cache thumbnails or fetch small thumbnails for media covers for main library thumbnail display (optional, thumbnail loading is actually that slow).~~ Update: caching won't work as backend is running on an older computer over Wi-Fi connection.
 - Add refresh button: use external_url to refresh details of select or all entries. Will be difficult as need to resolve conflicting changes if user made manual edits.
 - Enable search by URL for supported sources.
 - Possibly write a script for auto-scraping details from URL for unsupported sites. Will be very difficult due to different site structure/html. Additionally could build companion extension to allow scraping of websites without APIs.
-- **Urgent:**
+- **Doable:**
 - Add settings page for various settings: e.g. default search on library page, default source selection when searching for new entries + currently implemented settings (change password and wipe data).
 - Add "Explore" page, fetching recent media from all sources, have some simple searching/filtering functionality (basically expand "add entry" modal to full pagge).
     
