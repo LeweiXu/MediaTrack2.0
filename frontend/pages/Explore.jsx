@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getExplore, getSettings } from '../api.jsx';
 import { MEDIUMS, statusLabel } from '../utils.jsx';
 import { SkeletonExploreGrid } from './components/Skeletons.jsx';
@@ -7,15 +8,25 @@ import AddEntryModal from './components/AddEntryModal.jsx';
 // 32-bit unsigned integer; backend re-seeds Python's RNG with it.
 const newSeed = () => Math.floor(Math.random() * 0xffffffff);
 
+function mediumFromParam(raw) {
+  if (raw == null) return undefined;
+  const value = raw.trim();
+  if (!value || value.toLowerCase() === 'all') return '';
+  return MEDIUMS.find(m => m.toLowerCase() === value.toLowerCase()) ?? null;
+}
+
 export default function Explore() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialUrlMedium = useRef(mediumFromParam(searchParams.get('medium')));
   const [items,        setItems]        = useState([]);
   const [affinity,     setAffinity]     = useState(null);
   const [personalised, setPersonalised] = useState(false);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState('');
+  const exploreRequestSeq = useRef(0);
 
   // Settings seed the default medium; bias dimension lives in Settings.
-  const [medium,       setMedium]       = useState('');
+  const [medium,       setMedium]       = useState(() => initialUrlMedium.current ?? '');
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Per-card UI state — keyed by stable index because explore items have no DB id
@@ -34,7 +45,9 @@ export default function Explore() {
       try {
         const s = await getSettings();
         if (cancelled) return;
-        setMedium(s.explore_default_medium || '');
+        if (initialUrlMedium.current === undefined) {
+          setMedium(s.explore_default_medium || '');
+        }
       } catch {
         /* fall back to defaults */
       } finally {
@@ -44,20 +57,52 @@ export default function Explore() {
     return () => { cancelled = true; };
   }, []);
 
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev);
+      if (medium) {
+        next.set('medium', medium);
+      } else {
+        next.delete('medium');
+      }
+      return next;
+    }, { replace: true });
+  }, [medium, settingsLoaded, setSearchParams]);
+
+  useEffect(() => {
+    const urlMedium = mediumFromParam(searchParams.get('medium'));
+    if (urlMedium === null) {
+      setSearchParams(prev => {
+        const next = new URLSearchParams(prev);
+        next.delete('medium');
+        return next;
+      }, { replace: true });
+      setMedium(prev => prev === '' ? prev : '');
+      return;
+    }
+    const nextMedium = urlMedium ?? '';
+    setMedium(prev => prev === nextMedium ? prev : nextMedium);
+  }, [searchParams, setSearchParams]);
+
   // ── Fetch explore data whenever filters or seed change ──────────────────
   const fetchExplore = useCallback(async () => {
+    const requestSeq = ++exploreRequestSeq.current;
     setLoading(true); setError(''); setCardState({});
     try {
       const data = await getExplore({
         medium, limit: 30, seed,
         refresh: refreshFlag,
       });
+      if (requestSeq !== exploreRequestSeq.current) return;
       setItems(data.items || []);
       setAffinity(data.affinity || null);
       setPersonalised(!!data.personalised);
     } catch (e) {
+      if (requestSeq !== exploreRequestSeq.current) return;
       setError(e.message);
     } finally {
+      if (requestSeq !== exploreRequestSeq.current) return;
       setLoading(false);
       setRefreshFlag(false);
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, NavLink, useNavigate } from 'react-router-dom';
 import Dashboard   from './pages/Dashboard.jsx';
 import Library     from './pages/Library.jsx';
@@ -14,7 +14,6 @@ export default function App() {
   const [online,         setOnline]         = useState(null);
   const [libraryFilters, setLibraryFilters] = useState({});
   const [showSettings,   setShowSettings]   = useState(false);
-  const [settingsVersion, setSettingsVersion] = useState(0);
 
   // ── Theme ──────────────────────────────────────────────────────────────────
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
@@ -85,10 +84,6 @@ export default function App() {
     setLibraryFilters({});
     navigate('/library');
   }
-
-  const handleSettingsChanged = useCallback(() => {
-    setSettingsVersion(v => v + 1);
-  }, []);
 
   return (
     <div className="app-shell">
@@ -168,7 +163,7 @@ export default function App() {
         />
         <Route path="/explore"
           element={isAuthenticated
-            ? <Explore key={`${username}:${settingsVersion}`} />
+            ? <Explore key={username} />
             : <Navigate to="/" replace />}
         />
         <Route path="/statistics"
@@ -182,7 +177,6 @@ export default function App() {
       {showSettings && (
         <SettingsModal
           onClose={() => setShowSettings(false)}
-          onSettingsChanged={handleSettingsChanged}
           onDataDeleted={() => { setShowSettings(false); navigate('/library'); }}
         />
       )}

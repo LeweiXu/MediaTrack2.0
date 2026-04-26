@@ -35,9 +35,9 @@ export default function SettingsModal({ onClose, onDataDeleted, onSettingsChange
 
   // ── Live-bound user settings (Library + Explore) ──────────────────────
   const [exploreMedium,  setExploreMedium]  = useState('');
-  const [exploreBy,      setExploreBy]      = useState('all');
-  const [librarySort,    setLibrarySort]    = useState('updated_at');
-  const [libraryPerPage, setLibraryPerPage] = useState(40);
+  const [exploreBy,      setExploreBy]      = useState('');
+  const [librarySort,    setLibrarySort]    = useState('');
+  const [libraryPerPage, setLibraryPerPage] = useState('');
   const [prefsLoaded,    setPrefsLoaded]    = useState(false);
   const prefsReadyRef = useRef(false);
 
@@ -197,6 +197,7 @@ export default function SettingsModal({ onClose, onDataDeleted, onSettingsChange
                 onChange={e => setLibrarySort(e.target.value)}
                 disabled={!prefsLoaded}
               >
+                <option value="" hidden />
                 {LIBRARY_SORT_FIELDS.map(f => (
                   <option key={f.key} value={f.key}>{f.label}</option>
                 ))}
@@ -210,6 +211,7 @@ export default function SettingsModal({ onClose, onDataDeleted, onSettingsChange
                 onChange={e => setLibraryPerPage(Number(e.target.value))}
                 disabled={!prefsLoaded}
               >
+                <option value="" hidden />
                 {LIBRARY_PAGE_SIZE_OPTIONS.map(n => (
                   <option key={n} value={n}>{n}</option>
                 ))}
@@ -225,10 +227,11 @@ export default function SettingsModal({ onClose, onDataDeleted, onSettingsChange
               <label className="form-label">Default medium</label>
               <select
                 className="form-input"
-                value={exploreMedium}
+                value={prefsLoaded ? exploreMedium : '__loading'}
                 onChange={e => setExploreMedium(e.target.value)}
                 disabled={!prefsLoaded}
               >
+                <option value="__loading" hidden />
                 <option value="">All</option>
                 {MEDIUMS.map(m => <option key={m} value={m}>{m}</option>)}
               </select>
@@ -241,6 +244,7 @@ export default function SettingsModal({ onClose, onDataDeleted, onSettingsChange
                 onChange={e => setExploreBy(e.target.value)}
                 disabled={!prefsLoaded}
               >
+                <option value="" hidden />
                 {EXPLORE_BY_OPTIONS.map(o => (
                   <option key={o.key} value={o.key}>{o.label}</option>
                 ))}
